@@ -49,6 +49,10 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({
+  name: 'EventCard'
+});
+
 import { computed } from 'vue';
 import {
   IonCard,

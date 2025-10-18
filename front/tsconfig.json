@@ -4,7 +4,9 @@
     "useDefineForClassFields": true,
     "module": "ESNext",
     "moduleResolution": "Node",
-    "strict": true,
+  "strict": true,
+  "allowSyntheticDefaultImports": true,
+  "types": ["vite/client", "vue"],
     "jsx": "preserve",
     "resolveJsonModule": true,
     "isolatedModules": true,
@@ -17,6 +19,7 @@
       "@/*": ["./src/*"]
     }
   },
+  "vueCompilerOptions": {},
   "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],
   "exclude": ["node_modules", "dist"],
   "references": [{ "path": "./tsconfig.node.json" }]

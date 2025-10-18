@@ -1,5 +1,8 @@
 {
     "recommendations": [
-        "Webnative.webnative"
-    ]
+      "Vue.volar",
+      "Vue.vscode-typescript-vue-plugin",
+      "MisterJ.vue-volar-extention-pack"
+    ],
+    
 }

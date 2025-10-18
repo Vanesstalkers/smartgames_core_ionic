@@ -23,6 +23,17 @@
         <ion-card>
           <ion-card-header>
             <ion-card-title>Ближайшие события</ion-card-title>
+            <div class="filters-row">
+              <ion-searchbar v-model="searchQuery" placeholder="Поиск по событиям" />
+              <ion-select v-model="selectedCategory" placeholder="Категория">
+                <ion-select-option value="">Все</ion-select-option>
+                <ion-select-option v-for="c in categories" :key="c" :value="c">{{ c }}</ion-select-option>
+              </ion-select>
+              <div class="important-toggle">
+                <ion-label>Только важные</ion-label>
+                <ion-toggle v-model="showImportantOnly" />
+              </div>
+            </div>
           </ion-card-header>
           <ion-card-content>
             <div v-if="upcomingEvents.length === 0" class="empty-state">
@@ -158,8 +169,8 @@ import {
   settings
 } from 'ionicons/icons';
 import { defineAsyncComponent } from 'vue';
-
-const EventCard = defineAsyncComponent(() => import('../components/EventCard.vue'));
+import { IonSearchbar, IonSelect, IonSelectOption, IonToggle, IonLabel } from '@ionic/vue';
+import EventCard from '@/components/EventCard.vue';
 const AddEventModal = defineAsyncComponent(() => import('../components/AddEventModal.vue'));
 import eventsStore from '@/store/events';
 
@@ -179,20 +190,44 @@ interface MemorialEvent {
 const isAddEventModalOpen = ref(false);
 const editingEvent = ref<MemorialEvent | null>(null);
 const events = eventsStore.events;
+// Filters
+const searchQuery = ref('');
+const selectedCategory = ref(''); // empty = all
+const showImportantOnly = ref(false);
 
 // Вычисляемые свойства
 const upcomingEvents = computed(() => {
   const today = new Date();
   const next30Days = new Date();
   next30Days.setDate(today.getDate() + 30);
-  
+
+  const q = searchQuery.value.trim().toLowerCase();
+  const cat = selectedCategory.value;
+  const importantOnly = showImportantOnly.value;
+
   return events.value
     .filter(event => {
       const eventDate = new Date(event.date);
-      return eventDate >= today && eventDate <= next30Days;
+      if (!(eventDate >= today && eventDate <= next30Days)) return false;
+      if (importantOnly && !event.isImportant) return false;
+      if (cat && event.category !== cat) return false;
+      if (q) {
+        const inTitle = event.title.toLowerCase().includes(q);
+        const inCategory = event.category.toLowerCase().includes(q);
+        const inDesc = (event.description || '').toLowerCase().includes(q);
+        if (!(inTitle || inCategory || inDesc)) return false;
+      }
+      return true;
     })
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 5);
+    .slice(0, 50); // show more results in dashboard
+});
+
+// Derived categories from events
+const categories = computed(() => {
+  const set = new Set<string>();
+  events.value.forEach(e => set.add(e.category));
+  return Array.from(set).sort();
 });
 
 const totalEvents = computed(() => events.value.length);
@@ -290,5 +325,27 @@ onMounted(() => {
   margin: 0;
   font-size: 12px;
   color: var(--ion-color-medium);
+}
+
+.filters-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.filters-row ion-searchbar {
+  flex: 1;
+  max-width: 320px;
+}
+
+.filters-row ion-select {
+  width: 160px;
+}
+
+.important-toggle {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 </style>

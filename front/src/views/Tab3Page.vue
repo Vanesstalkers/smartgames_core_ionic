@@ -44,9 +44,9 @@
 import { ref } from 'vue';
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonButton, IonIcon, IonList, IonItem, IonLabel } from '@ionic/vue';
 import { add } from 'ionicons/icons';
-import EventCard from '@/components/EventCard.vue';
-import AddEventModal from '@/components/AddEventModal.vue';
-import eventsStore from '@/store/events';
+import EventCard from '../components/EventCard.vue';
+import AddEventModal from '../components/AddEventModal.vue';
+import eventsStore from '../store/events';
 
 const events = eventsStore.events;
 const isAddEventModalOpen = ref(false);
