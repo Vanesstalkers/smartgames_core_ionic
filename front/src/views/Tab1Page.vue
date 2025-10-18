@@ -161,6 +161,7 @@ import { defineAsyncComponent } from 'vue';
 
 const EventCard = defineAsyncComponent(() => import('../components/EventCard.vue'));
 const AddEventModal = defineAsyncComponent(() => import('../components/AddEventModal.vue'));
+import eventsStore from '@/store/events';
 
 // Интерфейс события
 interface MemorialEvent {
@@ -177,7 +178,7 @@ interface MemorialEvent {
 // Состояние
 const isAddEventModalOpen = ref(false);
 const editingEvent = ref<MemorialEvent | null>(null);
-const events = ref<MemorialEvent[]>([]);
+const events = eventsStore.events;
 
 // Вычисляемые свойства
 const upcomingEvents = computed(() => {
@@ -213,18 +214,10 @@ const closeAddEventModal = () => {
 
 const saveEvent = (eventData: Omit<MemorialEvent, 'id'>) => {
   if (editingEvent.value) {
-    // Редактирование существующего события
-    const index = events.value.findIndex(event => event.id === editingEvent.value!.id);
-    if (index > -1) {
-      events.value[index] = { ...eventData, id: editingEvent.value.id };
-    }
+    const updated: MemorialEvent = { ...eventData, id: editingEvent.value.id };
+    eventsStore.updateEvent(updated);
   } else {
-    // Добавление нового события
-    const newEvent: MemorialEvent = {
-      ...eventData,
-      id: Date.now().toString()
-    };
-    events.value.push(newEvent);
+    eventsStore.addEvent(eventData);
   }
   closeAddEventModal();
 };
@@ -248,49 +241,8 @@ const deleteEvent = (eventId: string) => {
 
 // Загрузка данных при монтировании
 onMounted(() => {
-  // Загружаем тестовые данные
-  events.value = [
-    {
-      id: '1',
-      title: 'День рождения мамы',
-      date: '2024-02-15',
-      description: 'День рождения самого дорогого человека',
-      category: 'Семья',
-      isImportant: true,
-      reminderDays: [7, 1],
-      color: '#ff6b6b'
-    },
-    {
-      id: '2',
-      title: 'Годовщина свадьбы',
-      date: '2024-03-20',
-      description: '5 лет вместе',
-      category: 'Семья',
-      isImportant: true,
-      reminderDays: [30, 7, 1],
-      color: '#4ecdc4'
-    },
-    {
-      id: '3',
-      title: 'День памяти дедушки',
-      date: '2024-01-30',
-      description: 'Памятная дата',
-      category: 'Память',
-      isImportant: false,
-      reminderDays: [1],
-      color: '#95a5a6'
-    },
-    {
-      id: '4',
-      title: 'День рождения друга',
-      date: '2024-12-25',
-      description: 'День рождения лучшего друга',
-      category: 'Друзья',
-      isImportant: false,
-      reminderDays: [7, 1],
-      color: '#45b7d1'
-    }
-  ];
+  // Инициализируем тестовые данные, если localStorage пуст
+  eventsStore.ensureSampleData();
 });
 </script>
 
