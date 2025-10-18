@@ -2,6 +2,12 @@ FROM node:18-alpine
 
 WORKDIR /usr/server
 
+# Accept build arguments
+ARG NODE_ENV=production
+
+# Set environment variable
+ENV NODE_ENV=${NODE_ENV}
+
 COPY package*.json ./
 
 RUN npm ci --only=production && npm cache clean --force

@@ -1,0 +1,29 @@
+{
+  "name": "SmartGames PWA",
+  "short_name": "SmartGames",
+  "description": "Progressive Web App для SmartGames - игровая платформа",
+  "theme_color": "#3880ff",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/",
+  "start_url": "/",
+  "lang": "ru",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    {
+      "src": "pwa-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "pwa-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

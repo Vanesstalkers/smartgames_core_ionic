@@ -3,26 +3,39 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        NODE_ENV: ${NODE_ENV:-production}
     container_name: api-example
     environment:
-      - DB_HOST=pg-example
-      - REDIS_HOST=redis-example
+      - CHOKIDAR_USEPOLLING=true
+      - CHOKIDAR_INTERVAL=1000
+      - DB_HOST=${DB_HOST:-pg-example}
+      - REDIS_HOST=${REDIS_HOST:-redis-example}
+      - MONGODB_HOST=${MONGODB_HOST:-mongo-example}
     depends_on:
       - pg-example
       - redis-example
+      - mongo-example
     ports:
       - "127.0.0.1:8000:8000"
       - "127.0.0.1:8001:8001"
       - "127.0.0.1:8002:8002"
+    volumes:
+      - type: bind
+        source: ./application
+        target: /usr/server/application
+      - type: bind  
+        source: ./server.js
+        target: /usr/server/server.js
     restart: always
 
   pg-example:
     image: postgres:17-alpine
     container_name: pg-example
     environment:
-      - POSTGRES_USER=marcus
-      - POSTGRES_PASSWORD=marcus
-      - POSTGRES_DB=application
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-application}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -36,8 +49,20 @@ services:
       - "127.0.0.1:6379:6379"
     restart: always
 
+  mongo-example:
+    image: mongo:7.0
+    container_name: mongo-example
+    environment:
+      - MONGO_INITDB_DATABASE=${MONGO_INITDB_DATABASE:-application}
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+      - "127.0.0.1:27017:27017"
+    restart: always
+
 volumes:
   postgres_data:
+  mongodb_data:
 
 networks:
   default:
