@@ -1,4 +1,5 @@
 import { ref, watch } from 'vue';
+import { createSampleEvents } from '@/data/sampleEvents';
 
 export interface MemorialEvent {
   id: string;
@@ -37,33 +38,16 @@ function save() {
   }
 }
 
-// Простая инициализация тестовыми данными, вызывается только если хранилище пустое
+// Инициализация тестовыми данными, вызывается только если хранилище пустое
 function ensureSampleData() {
   if (events.value.length === 0) {
-    const now = new Date();
-    const sample: MemorialEvent[] = [
-      {
-        id: '1',
-        title: 'День рождения мамы',
-        date: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7).toISOString().slice(0, 10),
-        description: 'День рождения самого дорогого человека',
-        category: 'Семья',
-        isImportant: true,
-        reminderDays: [7, 1],
-        color: '#ff6b6b'
-      },
-      {
-        id: '2',
-        title: 'Годовщина свадьбы',
-        date: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 30).toISOString().slice(0, 10),
-        description: 'Празднование',
-        category: 'Семья',
-        isImportant: true,
-        reminderDays: [30, 7, 1],
-        color: '#4ecdc4'
-      }
-    ];
-    events.value = sample;
+    const sampleEvents = createSampleEvents();
+    const sampleWithIds: MemorialEvent[] = sampleEvents.map((event, index) => ({
+      ...event,
+      id: (index + 1).toString()
+    }));
+    
+    events.value = sampleWithIds;
     save();
   }
 }
