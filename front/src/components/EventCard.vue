@@ -39,6 +39,15 @@
         </div>
       </div>
       
+      <!-- Информация о бюджете -->
+      <div v-if="event.budget && event.budget > 0" class="budget-info">
+        <ion-icon :icon="wallet" color="primary"></ion-icon>
+        <span>Бюджет: {{ formatCurrency(event.budget) }}</span>
+        <span v-if="event.spent && event.spent > 0" class="spent">
+          (потрачено: {{ formatCurrency(event.spent) }})
+        </span>
+      </div>
+      
       <!-- Индикатор повторений -->
       <div v-if="event.reminderDays.length > 0" class="reminder-info">
         <ion-icon :icon="notificationsOutline"></ion-icon>
@@ -71,7 +80,8 @@ import {
   peopleOutline,
   heartOutline,
   businessOutline,
-  starOutline
+  starOutline,
+  wallet
 } from 'ionicons/icons';
 import { defineAsyncComponent } from 'vue';
 
@@ -87,6 +97,8 @@ interface MemorialEvent {
   isImportant: boolean;
   reminderDays: number[];
   color: string;
+  budget?: number;
+  spent?: number;
 }
 
 // Пропсы
@@ -153,6 +165,13 @@ const formatReminderDays = (days: number[]): string => {
       return `за ${day} дней`;
     })
     .join(', ');
+};
+
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('ru-RU', {
+    style: 'currency',
+    currency: 'RUB'
+  }).format(amount);
 };
 
 const confirmDelete = () => {
@@ -238,6 +257,23 @@ defineExpose({});
 
 .days-remaining {
   text-align: right;
+}
+
+.budget-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--ion-color-medium);
+  padding: 8px 12px;
+  background: var(--ion-color-light);
+  border-radius: 8px;
+}
+
+.budget-info .spent {
+  color: var(--ion-color-warning);
+  font-size: 12px;
 }
 
 .reminder-info {

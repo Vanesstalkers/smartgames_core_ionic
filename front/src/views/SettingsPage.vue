@@ -12,6 +12,27 @@
         </ion-toolbar>
       </ion-header>
 
+      <!-- Управление балансом -->
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>Финансы</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <ion-list>
+            <ion-item>
+              <ion-icon :icon="wallet" slot="start" color="primary"></ion-icon>
+              <ion-label>
+                <h2>Текущий баланс</h2>
+                <p>{{ formatCurrency(userProfile.balance) }}</p>
+              </ion-label>
+              <ion-button slot="end" fill="outline" size="small" @click="openTopUpModal">
+                Пополнить
+              </ion-button>
+            </ion-item>
+          </ion-list>
+        </ion-card-content>
+      </ion-card>
+
       <!-- Настройки уведомлений -->
       <ion-card>
         <ion-card-header>
@@ -146,12 +167,17 @@ import {
   people,
   business,
   star,
-  home
+  home,
+  wallet
 } from 'ionicons/icons';
+import userStore from '@/store/user';
 
 // Состояние настроек
 const notificationsEnabled = ref(true);
 const reminderTime = ref('09:00');
+
+// Импорт userStore
+const { userProfile, formatCurrency } = userStore;
 
 // Категории событий
 const categories = ref([
@@ -209,6 +235,15 @@ const openPrivacyPolicy = () => {
 const openTerms = () => {
   console.log('Открыть условия использования');
   alert('Условия использования будут добавлены позже');
+};
+
+const openTopUpModal = () => {
+  // Простое пополнение через prompt
+  const amount = prompt('Введите сумму для пополнения:');
+  if (amount && !isNaN(Number(amount)) && Number(amount) > 0) {
+    userStore.addToBalance(Number(amount));
+    alert(`Счет пополнен на ${formatCurrency(Number(amount))}`);
+  }
 };
 </script>
 

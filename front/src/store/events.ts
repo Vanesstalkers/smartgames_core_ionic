@@ -10,6 +10,8 @@ export interface MemorialEvent {
   isImportant: boolean;
   reminderDays: number[];
   color: string;
+  budget?: number; // Бюджет для события
+  spent?: number; // Потрачено на событие
 }
 
 const LS_KEY = 'sg_events_v1';

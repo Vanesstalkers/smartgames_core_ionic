@@ -18,22 +18,63 @@
         </ion-toolbar>
       </ion-header>
 
+      <!-- Управление балансом -->
+      <BalanceCard />
+
+      <!-- Компактная статистика -->
+      <div class="compact-stats">
+        <ion-card>
+          <ion-card-content>
+            <div class="stats-row">
+              <div class="stat-item">
+                <ion-icon :icon="calendarOutline" color="primary"></ion-icon>
+                <span>{{ totalEvents }}</span>
+                <small>Всего</small>
+              </div>
+              <div class="stat-item">
+                <ion-icon :icon="notificationsOutline" color="warning"></ion-icon>
+                <span>{{ upcomingEvents.length }}</span>
+                <small>Предстоящих</small>
+              </div>
+              <div class="stat-item">
+                <ion-icon :icon="heartOutline" color="danger"></ion-icon>
+                <span>{{ importantEvents }}</span>
+                <small>Важных</small>
+              </div>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      </div>
+
+      <!-- Компактные фильтры -->
+      <div class="compact-filters">
+        <ion-card>
+          <ion-card-content>
+            <div class="filters-row">
+              <ion-searchbar v-model="searchQuery" placeholder="Поиск событий" class="compact-search" />
+              <ion-select v-model="selectedCategory" placeholder="Категория" interface="popover">
+                <ion-select-option value="">Все</ion-select-option>
+                <ion-select-option v-for="c in categories" :key="c" :value="c">{{ c }}</ion-select-option>
+              </ion-select>
+              <ion-button 
+                :fill="showImportantOnly ? 'solid' : 'outline'" 
+                :color="showImportantOnly ? 'warning' : 'medium'"
+                @click="showImportantOnly = !showImportantOnly"
+                size="small"
+              >
+                <ion-icon :icon="heartOutline" slot="start"></ion-icon>
+                Важные
+              </ion-button>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      </div>
+
       <!-- Ближайшие события -->
       <div class="upcoming-events">
         <ion-card>
           <ion-card-header>
             <ion-card-title>Ближайшие события</ion-card-title>
-            <div class="filters-row">
-              <ion-searchbar v-model="searchQuery" placeholder="Поиск по событиям" />
-              <ion-select v-model="selectedCategory" placeholder="Категория">
-                <ion-select-option value="">Все</ion-select-option>
-                <ion-select-option v-for="c in categories" :key="c" :value="c">{{ c }}</ion-select-option>
-              </ion-select>
-              <div class="important-toggle">
-                <ion-label>Только важные</ion-label>
-                <ion-toggle v-model="showImportantOnly" />
-              </div>
-            </div>
           </ion-card-header>
           <ion-card-content>
             <div v-if="upcomingEvents.length === 0" class="empty-state">
@@ -54,77 +95,28 @@
         </ion-card>
       </div>
 
-      <!-- Статистика -->
-      <div class="stats-section">
-        <ion-card>
-          <ion-card-header>
-            <ion-card-title>Статистика</ion-card-title>
-          </ion-card-header>
-          <ion-card-content>
-            <div class="stats-grid">
-              <div class="stat-item">
-                <ion-icon :icon="calendarOutline" color="primary"></ion-icon>
-                <div>
-                  <h3>{{ totalEvents }}</h3>
-                  <p>Всего событий</p>
-                </div>
-              </div>
-              <div class="stat-item">
-                <ion-icon :icon="notificationsOutline" color="warning"></ion-icon>
-                <div>
-                  <h3>{{ upcomingEvents.length }}</h3>
-                  <p>Предстоящих</p>
-                </div>
-              </div>
-              <div class="stat-item">
-                <ion-icon :icon="heartOutline" color="danger"></ion-icon>
-                <div>
-                  <h3>{{ importantEvents }}</h3>
-                  <p>Важных</p>
-                </div>
-              </div>
-            </div>
-          </ion-card-content>
-        </ion-card>
-      </div>
-
-      <!-- Быстрые действия -->
+      <!-- Компактные быстрые действия -->
       <div class="quick-actions">
         <ion-card>
-          <ion-card-header>
-            <ion-card-title>Быстрые действия</ion-card-title>
-          </ion-card-header>
           <ion-card-content>
-            <ion-grid>
-              <ion-row>
-                <ion-col size="6">
-                  <ion-button expand="block" fill="outline" @click="openAddEventModal">
-                    <ion-icon :icon="add" slot="start"></ion-icon>
-                    Добавить событие
-                  </ion-button>
-                </ion-col>
-                <ion-col size="6">
-                  <ion-button expand="block" fill="outline" router-link="/tabs/calendar">
-                    <ion-icon :icon="calendar" slot="start"></ion-icon>
-                    Календарь
-                  </ion-button>
-                </ion-col>
-              </ion-row>
-              <ion-row>
-                <ion-col size="6">
-                  <ion-button expand="block" fill="outline" router-link="/tabs/events">
-                    <ion-icon :icon="list" slot="start"></ion-icon>
-                    Все события
-                  </ion-button>
-                </ion-col>
-                <ion-col size="6">
-                  <ion-button expand="block" fill="outline" router-link="/tabs/settings">
-                    <ion-icon :icon="settings" slot="start"></ion-icon>
-                    Настройки
-                  </ion-button>
-                </ion-col>
-              </ion-row>
-            </ion-grid>
+            <div class="actions-grid">
+              <ion-button expand="block" fill="outline" @click="openAddEventModal" class="action-button">
+                <ion-icon :icon="add" slot="start"></ion-icon>
+                Добавить
+              </ion-button>
+              <ion-button expand="block" fill="outline" router-link="/tabs/calendar" class="action-button">
+                <ion-icon :icon="calendar" slot="start"></ion-icon>
+                Календарь
+              </ion-button>
+              <ion-button expand="block" fill="outline" router-link="/tabs/events" class="action-button">
+                <ion-icon :icon="list" slot="start"></ion-icon>
+                Все события
+              </ion-button>
+              <ion-button expand="block" fill="outline" router-link="/tabs/settings" class="action-button">
+                <ion-icon :icon="settings" slot="start"></ion-icon>
+                Настройки
+              </ion-button>
+            </div>
           </ion-card-content>
         </ion-card>
       </div>
@@ -155,9 +147,6 @@ import {
   IonButtons,
   IonButton,
   IonIcon,
-  IonGrid,
-  IonRow,
-  IonCol
 } from '@ionic/vue';
 import { 
   add, 
@@ -169,8 +158,9 @@ import {
   settings
 } from 'ionicons/icons';
 import { defineAsyncComponent } from 'vue';
-import { IonSearchbar, IonSelect, IonSelectOption, IonToggle, IonLabel } from '@ionic/vue';
+import { IonSearchbar, IonSelect, IonSelectOption } from '@ionic/vue';
 import EventCard from '@/components/EventCard.vue';
+import BalanceCard from '@/components/BalanceCard.vue';
 const AddEventModal = defineAsyncComponent(() => import('../components/AddEventModal.vue'));
 import eventsStore from '@/store/events';
 
@@ -282,70 +272,99 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.compact-stats,
+.compact-filters,
 .upcoming-events,
-.stats-section,
 .quick-actions {
-  margin: 16px;
+  margin: 8px;
 }
 
-.empty-state {
-  text-align: center;
-  padding: 32px 16px;
-  color: var(--ion-color-medium);
-}
-
-.empty-state ion-icon {
-  margin-bottom: 16px;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 16px;
-}
-
-.stat-item {
+/* Компактная статистика */
+.stats-row {
   display: flex;
+  justify-content: space-around;
   align-items: center;
-  gap: 12px;
-  text-align: left;
+  padding: 8px 0;
 }
 
-.stat-item ion-icon {
-  font-size: 24px;
+.stats-row .stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
 }
 
-.stat-item h3 {
-  margin: 0;
-  font-size: 24px;
+.stats-row .stat-item ion-icon {
+  font-size: 20px;
+}
+
+.stats-row .stat-item span {
+  font-size: 18px;
   font-weight: bold;
+  color: var(--ion-color-dark);
 }
 
-.stat-item p {
-  margin: 0;
-  font-size: 12px;
+.stats-row .stat-item small {
+  font-size: 11px;
   color: var(--ion-color-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
+/* Компактные фильтры */
 .filters-row {
   display: flex;
   gap: 8px;
   align-items: center;
-  margin-top: 8px;
+  flex-wrap: wrap;
 }
 
-.filters-row ion-searchbar {
+.compact-search {
   flex: 1;
-  max-width: 320px;
+  min-width: 200px;
 }
 
 .filters-row ion-select {
-  width: 160px;
+  min-width: 120px;
 }
 
-.important-toggle {
-  display: flex;
+/* Быстрые действия */
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
-  align-items: center;
+}
+
+.action-button {
+  height: 48px;
+  font-size: 14px;
+}
+
+/* Общие стили */
+.empty-state {
+  text-align: center;
+  padding: 24px 16px;
+  color: var(--ion-color-medium);
+}
+
+.empty-state ion-icon {
+  margin-bottom: 12px;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .actions-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .filters-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .compact-search {
+    min-width: auto;
+  }
 }
 </style>

@@ -78,6 +78,17 @@
           </div>
         </ion-item>
         
+        <!-- Бюджет события -->
+        <ion-item>
+          <ion-label position="stacked">Бюджет события</ion-label>
+          <ion-input 
+            v-model="form.budget" 
+            type="number" 
+            placeholder="Укажите бюджет (необязательно)"
+            :min="0"
+          ></ion-input>
+        </ion-item>
+        
         <!-- Цвет события -->
         <ion-item>
           <ion-label position="stacked">Цвет события</ion-label>
@@ -140,6 +151,8 @@ interface MemorialEvent {
   isImportant: boolean;
   reminderDays: number[];
   color: string;
+  budget?: number;
+  spent?: number;
 }
 
 // Пропсы
@@ -164,7 +177,8 @@ const form = ref({
   category: '',
   isImportant: false,
   reminderDays: [] as number[],
-  color: '#3880ff'
+  color: '#3880ff',
+  budget: 0
 });
 
 // Опции для напоминаний
@@ -220,7 +234,8 @@ const resetForm = () => {
     category: '',
     isImportant: false,
     reminderDays: [],
-    color: '#3880ff'
+    color: '#3880ff',
+    budget: 0
   };
 };
 
@@ -238,7 +253,9 @@ const saveEvent = () => {
       category: form.value.category,
       isImportant: form.value.isImportant,
       reminderDays: [...form.value.reminderDays].sort((a, b) => b - a),
-      color: form.value.color
+      color: form.value.color,
+      budget: form.value.budget || undefined,
+      spent: 0
     };
     
     emit('save', eventData);
@@ -256,7 +273,8 @@ watch(() => props.editingEvent, (newEvent) => {
       category: newEvent.category,
       isImportant: newEvent.isImportant,
       reminderDays: [...newEvent.reminderDays],
-      color: newEvent.color
+      color: newEvent.color,
+      budget: newEvent.budget || 0
     };
   }
 }, { immediate: true });
