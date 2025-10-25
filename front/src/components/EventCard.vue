@@ -6,7 +6,7 @@
           <h3 class="event-title">{{ event.title }}</h3>
           <p class="event-date">
             <ion-icon :icon="calendarOutline"></ion-icon>
-            {{ formattedDate }}
+            {{ compactDate }}
           </p>
           <p v-if="event.description" class="event-description">
             {{ event.description }}
@@ -115,12 +115,42 @@ const emit = defineEmits<{
 }>();
 
 // Вычисляемые свойства
-const formattedDate = computed(() => {
+const compactDate = computed(() => {
   const date = new Date(props.event.date);
+  const today = new Date();
+  const diffTime = date.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  // Если событие сегодня
+  if (diffDays === 0) {
+    return 'Сегодня';
+  }
+  
+  // Если событие завтра
+  if (diffDays === 1) {
+    return 'Завтра';
+  }
+  
+  // Если событие вчера
+  if (diffDays === -1) {
+    return 'Вчера';
+  }
+  
+  // Если событие в ближайшие дни (до 7 дней)
+  if (diffDays > 0 && diffDays <= 7) {
+    return `Через ${diffDays} дн.`;
+  }
+  
+  // Если событие в прошлом (до 7 дней назад)
+  if (diffDays < 0 && diffDays >= -7) {
+    return `${Math.abs(diffDays)} дн. назад`;
+  }
+  
+  // Для остальных случаев - компактный формат
   return date.toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
+    day: '2-digit',
+    month: '2-digit',
+    year: '2-digit'
   });
 });
 
@@ -222,12 +252,13 @@ defineExpose({});
   align-items: center;
   gap: 6px;
   margin: 0 0 8px 0;
-  font-size: 14px;
+  font-size: 12px;
   color: var(--ion-color-medium);
+  font-weight: 500;
 }
 
 .event-date ion-icon {
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .event-description {
