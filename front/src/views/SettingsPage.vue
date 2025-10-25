@@ -15,6 +15,7 @@
       <!-- PWA компоненты -->
       <PWAInstallPrompt />
       <PWAStatus />
+      <PWAInstallInstructions />
 
       <!-- Управление балансом -->
       <ion-card>
@@ -177,6 +178,7 @@ import {
 import userStore from '@/store/user';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt.vue';
 import PWAStatus from '@/components/PWAStatus.vue';
+import PWAInstallInstructions from '@/components/PWAInstallInstructions.vue';
 
 // Состояние настроек
 const notificationsEnabled = ref(true);

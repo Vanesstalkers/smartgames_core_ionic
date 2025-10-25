@@ -24,6 +24,7 @@
       <!-- PWA компоненты -->
       <PWAInstallPrompt />
       <PWAStatus />
+      <PWAInstallInstructions />
 
       <!-- Компактная статистика -->
       <div class="compact-stats">
@@ -167,6 +168,7 @@ import EventCard from '@/components/EventCard.vue';
 import BalanceCard from '@/components/BalanceCard.vue';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt.vue';
 import PWAStatus from '@/components/PWAStatus.vue';
+import PWAInstallInstructions from '@/components/PWAInstallInstructions.vue';
 const AddEventModal = defineAsyncComponent(() => import('../components/AddEventModal.vue'));
 import eventsStore from '@/store/events';
 
