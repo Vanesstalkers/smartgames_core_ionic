@@ -91,6 +91,18 @@
             :min="0"
           ></ion-input>
         </ion-item>
+
+        <!-- Контакты для поздравления (только для праздников) -->
+        <div v-if="form.category === 'Праздник'" class="contacts-section">
+          <ion-item>
+            <ion-label>
+              <h3>Список для поздравления</h3>
+              <p>Добавьте людей, которых нужно поздравить</p>
+            </ion-label>
+          </ion-item>
+          
+          <ContactPicker v-model="form.contacts" />
+        </div>
         
         <!-- Цвет события -->
         <ion-item>
@@ -145,6 +157,7 @@ import {
 } from '@ionic/vue';
 import { close, calendarOutline } from 'ionicons/icons';
 import { pickerController } from '@ionic/vue';
+import ContactPicker from './ContactPicker.vue';
 
 // Интерфейс события
 interface MemorialEvent {
@@ -158,6 +171,13 @@ interface MemorialEvent {
   color: string;
   budget?: number;
   spent?: number;
+  contacts?: Contact[];
+}
+
+interface Contact {
+  name?: string;
+  tel?: string;
+  email?: string;
 }
 
 // Пропсы
@@ -186,7 +206,8 @@ const form = ref({
   isImportant: false,
   reminderDays: [] as number[],
   color: '#3880ff',
-  budget: 0
+  budget: 0,
+  contacts: [] as Contact[]
 });
 
 // Инициализация при монтировании
@@ -378,7 +399,8 @@ const resetForm = () => {
     isImportant: false,
     reminderDays: [],
     color: '#3880ff',
-    budget: 0
+    budget: 0,
+    contacts: [] as Contact[]
   };
 };
 
@@ -417,7 +439,8 @@ watch(() => props.editingEvent, (newEvent) => {
       isImportant: newEvent.isImportant,
       reminderDays: [...newEvent.reminderDays],
       color: newEvent.color,
-      budget: newEvent.budget || 0
+      budget: newEvent.budget || 0,
+      contacts: newEvent.contacts || []
     };
   }
 }, { immediate: true });
@@ -429,6 +452,17 @@ watch(() => props.editingEvent, (newEvent) => {
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 8px;
+}
+
+.contacts-section {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--ion-color-light);
+  border-radius: 8px;
+}
+
+.contacts-section ion-item {
+  --padding-start: 0;
 }
 
 .color-options {

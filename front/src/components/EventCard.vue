@@ -47,6 +47,31 @@
           (потрачено: {{ formatCurrency(event.spent) }})
         </span>
       </div>
+
+      <!-- Контакты для поздравления -->
+      <div v-if="event.contacts && event.contacts.length > 0" class="contacts-info">
+        <div class="contacts-header">
+          <ion-icon :icon="people" color="secondary"></ion-icon>
+          <span>К поздравлению: {{ event.contacts.length }}</span>
+        </div>
+        <div class="contacts-list">
+          <ion-chip 
+            v-for="(contact, index) in event.contacts.slice(0, 3)" 
+            :key="index"
+            size="small"
+            color="secondary"
+          >
+            {{ contact.name || 'Без имени' }}
+          </ion-chip>
+          <ion-chip 
+            v-if="event.contacts.length > 3" 
+            size="small" 
+            color="medium"
+          >
+            +{{ event.contacts.length - 3 }}
+          </ion-chip>
+        </div>
+      </div>
       
       <!-- Индикатор повторений -->
       <div v-if="event.reminderDays.length > 0" class="reminder-info">
@@ -81,7 +106,8 @@ import {
   heartOutline,
   businessOutline,
   starOutline,
-  wallet
+  wallet,
+  people
 } from 'ionicons/icons';
 import { defineAsyncComponent } from 'vue';
 
@@ -99,6 +125,13 @@ interface MemorialEvent {
   color: string;
   budget?: number;
   spent?: number;
+  contacts?: Contact[];
+}
+
+interface Contact {
+  name?: string;
+  tel?: string;
+  email?: string;
 }
 
 // Пропсы
@@ -305,6 +338,28 @@ defineExpose({});
 .budget-info .spent {
   color: var(--ion-color-warning);
   font-size: 12px;
+}
+
+.contacts-info {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--ion-color-light);
+  border-radius: 16px;
+}
+
+.contacts-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+.contacts-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .reminder-info {

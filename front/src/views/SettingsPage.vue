@@ -12,6 +12,10 @@
         </ion-toolbar>
       </ion-header>
 
+      <!-- PWA компоненты -->
+      <PWAInstallPrompt />
+      <PWAStatus />
+
       <!-- Управление балансом -->
       <ion-card>
         <ion-card-header>
@@ -171,6 +175,8 @@ import {
   wallet
 } from 'ionicons/icons';
 import userStore from '@/store/user';
+import PWAInstallPrompt from '@/components/PWAInstallPrompt.vue';
+import PWAStatus from '@/components/PWAStatus.vue';
 
 // Состояние настроек
 const notificationsEnabled = ref(true);

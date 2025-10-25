@@ -12,6 +12,13 @@ export interface MemorialEvent {
   color: string;
   budget?: number; // Бюджет для события
   spent?: number; // Потрачено на событие
+  contacts?: Contact[]; // Список контактов для поздравления
+}
+
+export interface Contact {
+  name?: string;
+  tel?: string;
+  email?: string;
 }
 
 const LS_KEY = 'sg_events_v1';
