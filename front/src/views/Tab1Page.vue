@@ -214,7 +214,8 @@ const upcomingEvents = computed(() => {
   return events.value
     .filter(event => {
       const eventDate = new Date(event.date);
-      if (!(eventDate >= today && eventDate <= next30Days)) return false;
+      // Показываем события начиная с сегодня и в будущем (убираем ограничение в 30 дней)
+      if (eventDate < today) return false;
       if (importantOnly && !event.isImportant) return false;
       if (cat && event.category !== cat) return false;
       if (q) {
@@ -257,8 +258,11 @@ const saveEvent = (eventData: Omit<MemorialEvent, 'id'>) => {
   if (editingEvent.value) {
     const updated: MemorialEvent = { ...eventData, id: editingEvent.value.id };
     eventsStore.updateEvent(updated);
+    console.log('Событие обновлено:', updated);
   } else {
-    eventsStore.addEvent(eventData);
+    const newId = eventsStore.addEvent(eventData);
+    console.log('Событие добавлено с ID:', newId);
+    console.log('Все события:', events.value);
   }
   closeAddEventModal();
 };

@@ -184,6 +184,7 @@ interface Contact {
 interface Props {
   isOpen: boolean;
   editingEvent?: MemorialEvent | null;
+  presetDate?: string | null;
 }
 
 const props = defineProps<Props>();
@@ -264,10 +265,28 @@ const pickerColumns = computed(() => {
     value: i + 1
   }));
 
+  // Получаем текущую дату из формы
+  const currentDate = new Date(form.value.date);
+  const currentYearIndex = years.findIndex(y => y.value === currentDate.getFullYear());
+  const currentMonthIndex = currentDate.getMonth(); // 0-based
+  const currentDayIndex = currentDate.getDate() - 1; // 0-based
+
   return [
-    { name: 'year', options: years },
-    { name: 'month', options: months },
-    { name: 'day', options: days }
+    { 
+      name: 'year', 
+      options: years,
+      selectedIndex: currentYearIndex >= 0 ? currentYearIndex : 1 // Текущий год или следующий
+    },
+    { 
+      name: 'month', 
+      options: months,
+      selectedIndex: currentMonthIndex
+    },
+    { 
+      name: 'day', 
+      options: days,
+      selectedIndex: currentDayIndex
+    }
   ];
 });
 
@@ -413,7 +432,7 @@ const saveEvent = () => {
   if (isFormValid.value) {
     const eventData: Omit<MemorialEvent, 'id'> = {
       title: form.value.title.trim(),
-      date: form.value.date.split('T')[0], // Убираем время, оставляем только дату
+      date: form.value.date, // Дата уже в правильном формате YYYY-MM-DD
       description: form.value.description.trim(),
       category: form.value.category,
       isImportant: form.value.isImportant,
@@ -442,6 +461,14 @@ watch(() => props.editingEvent, (newEvent) => {
       budget: newEvent.budget || 0,
       contacts: newEvent.contacts || []
     };
+  }
+}, { immediate: true });
+
+// Следим за предустановленной датой
+watch(() => props.presetDate, (newDate) => {
+  if (newDate && !props.editingEvent) {
+    // Используем дату напрямую, без создания объекта Date
+    form.value.date = newDate;
   }
 }, { immediate: true });
 </script>
