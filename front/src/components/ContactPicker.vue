@@ -102,6 +102,7 @@ import {
   closeOutline,
   addOutline
 } from 'ionicons/icons';
+import { Contacts } from '@capacitor-community/contacts';
 
 // Интерфейс контакта
 interface Contact {
@@ -138,55 +139,108 @@ onMounted(() => {
   checkContactPickerSupport();
 });
 
-const checkContactPickerSupport = () => {
-  // Проверяем поддержку Contact Picker API
-  if ('contacts' in navigator && 'ContactsManager' in window) {
-    isContactPickerSupported.value = true;
-    console.log('✅ Contact Picker API поддерживается');
-  } else {
-    console.log('❌ Contact Picker API не поддерживается');
-    
-    // Проверяем альтернативные способы
-    if (navigator.share && typeof navigator.share === 'function') {
-      console.log('✅ Web Share API поддерживается');
+const checkContactPickerSupport = async () => {
+  try {
+    // Проверяем Capacitor Contacts (для мобильных приложений)
+    if (Contacts) {
+      const permissions = await Contacts.checkPermissions();
+      if (permissions.contacts === 'granted') {
+        isContactPickerSupported.value = true;
+        console.log('✅ Capacitor Contacts поддерживается и разрешен');
+        return;
+      }
     }
+    
+    // Проверяем поддержку Contact Picker API (для PWA)
+    if ('contacts' in navigator && 'ContactsManager' in window) {
+      isContactPickerSupported.value = true;
+      console.log('✅ Contact Picker API поддерживается');
+    } else {
+      console.log('❌ Contact Picker API не поддерживается');
+      
+      // Проверяем альтернативные способы
+      if (navigator.share && typeof navigator.share === 'function') {
+        console.log('✅ Web Share API поддерживается');
+      }
+    }
+  } catch (error) {
+    console.log('❌ Ошибка при проверке поддержки контактов:', error);
   }
 };
 
-// Импорт контактов через Contact Picker API
+// Импорт контактов через Capacitor или Contact Picker API
 const importContacts = async () => {
   try {
     console.log('📱 Импорт контактов...');
     
-    if (!isContactPickerSupported.value) {
-      console.log('❌ Contact Picker API не поддерживается');
-      alert('Импорт контактов недоступен в этом браузере. Используйте ручное добавление.');
-      return;
+    // Сначала пробуем Capacitor Contacts (для мобильных приложений)
+    if (Contacts) {
+      try {
+        // Запрашиваем разрешения
+        const permissions = await Contacts.requestPermissions();
+        if (permissions.contacts !== 'granted') {
+          alert('Необходимо разрешение на доступ к контактам');
+          return;
+        }
+
+        // Получаем контакты
+        const result = await Contacts.getContacts({
+          projection: {
+            name: true,
+            phones: true,
+            emails: true
+          }
+        });
+
+        console.log('📞 Получены контакты через Capacitor:', result.contacts);
+        
+        if (result.contacts && result.contacts.length > 0) {
+          // Обрабатываем полученные контакты
+          const processedContacts = result.contacts.map((contact: any) => ({
+            name: contact.name?.display || contact.name?.given || '',
+            tel: contact.phones?.[0]?.number || '',
+            email: contact.emails?.[0]?.address || ''
+          })).filter(contact => contact.name); // Фильтруем контакты без имени
+
+          // Добавляем к существующим контактам
+          selectedContacts.value = [...selectedContacts.value, ...processedContacts];
+          emit('update:modelValue', selectedContacts.value);
+          
+          console.log('✅ Контакты добавлены через Capacitor:', processedContacts.length);
+          return;
+        }
+      } catch (capacitorError) {
+        console.log('❌ Capacitor Contacts недоступен, пробуем PWA API:', capacitorError);
+      }
     }
 
-    // Запрашиваем контакты
-    const contacts = await (navigator as any).contacts.select([
-      'name', 
-      'tel', 
-      'email'
-    ], { multiple: true });
+    // Fallback: PWA Contact Picker API
+    if ('contacts' in navigator && 'ContactsManager' in window) {
+      const contacts = await (navigator as any).contacts.select([
+        'name', 
+        'tel', 
+        'email'
+      ], { multiple: true });
 
-    console.log('📞 Получены контакты:', contacts);
-    
-    if (contacts && contacts.length > 0) {
-      // Обрабатываем полученные контакты
-      const processedContacts = contacts.map((contact: any) => ({
-        name: contact.name?.[0] || '',
-        tel: contact.tel?.[0] || '',
-        email: contact.email?.[0] || ''
-      }));
-
-      // Добавляем к существующим контактам
-      selectedContacts.value = [...selectedContacts.value, ...processedContacts];
-      emit('update:modelValue', selectedContacts.value);
+      console.log('📞 Получены контакты через PWA API:', contacts);
       
-      console.log('✅ Контакты добавлены:', processedContacts.length);
+      if (contacts && contacts.length > 0) {
+        const processedContacts = contacts.map((contact: any) => ({
+          name: contact.name?.[0] || '',
+          tel: contact.tel?.[0] || '',
+          email: contact.email?.[0] || ''
+        }));
+
+        selectedContacts.value = [...selectedContacts.value, ...processedContacts];
+        emit('update:modelValue', selectedContacts.value);
+        
+        console.log('✅ Контакты добавлены через PWA API:', processedContacts.length);
+        return;
+      }
     }
+
+    // Если ничего не сработало
+    alert('Импорт контактов недоступен. Используйте ручное добавление.');
     
   } catch (error) {
     console.error('❌ Ошибка при импорте контактов:', error);

@@ -34,6 +34,9 @@ const config: CapacitorConfig = {
     },
     App: {
       launchUrl: '/'
+    },
+    Contacts: {
+      permissions: ['contacts']
     }
   },
   cordova: {
