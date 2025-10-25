@@ -1,19 +1,23 @@
 <template>
   <ion-card>
     <ion-card-header>
-      <ion-card-title>Мой счет</ion-card-title>
+      <div class="card-header-content">
+        <ion-card-title>Баланс</ion-card-title>
+        <ion-button 
+          size="small" 
+          fill="outline" 
+          @click="openTopUpModal"
+          class="top-up-button"
+        >
+          Пополнить
+        </ion-button>
+      </div>
     </ion-card-header>
     <ion-card-content>
       <div class="balance-display">
         <div class="balance-amount">
           <ion-icon :icon="wallet" color="primary"></ion-icon>
           <span class="amount">{{ formatCurrency(userProfile.balance) }}</span>
-        </div>
-        <div class="balance-actions">
-          <ion-button fill="outline" @click="openTopUpModal">
-            <ion-icon :icon="add" slot="start"></ion-icon>
-            Пополнить
-          </ion-button>
         </div>
       </div>
     </ion-card-content>
@@ -103,7 +107,7 @@ import {
   IonSelectOption,
   IonChip
 } from '@ionic/vue';
-import { wallet, add, close } from 'ionicons/icons';
+import { wallet, close } from 'ionicons/icons';
 import userStore from '@/store/user';
 
 const { userProfile, addToBalance, formatCurrency } = userStore;
@@ -135,7 +139,7 @@ const closeTopUpModal = () => {
 const processTopUp = () => {
   if (isTopUpValid.value) {
     // В реальном приложении здесь была бы интеграция с платежной системой
-    addToBalance(topUpAmount.value);
+    addToBalance(Number(topUpAmount.value));
     
     // Показываем уведомление об успехе
     alert(`Счет пополнен на ${formatCurrency(topUpAmount.value)}`);
@@ -148,7 +152,6 @@ const processTopUp = () => {
 <style scoped>
 .balance-display {
   text-align: center;
-  padding: 16px 0;
 }
 
 .balance-amount {
@@ -156,13 +159,26 @@ const processTopUp = () => {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  margin-bottom: 16px;
 }
 
 .amount {
   font-size: 24px;
   font-weight: bold;
   color: var(--ion-color-primary);
+}
+
+.card-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.top-up-button {
+  --padding-start: 12px;
+  --padding-end: 12px;
+  height: 32px;
+  font-size: 12px;
 }
 
 .balance-actions {

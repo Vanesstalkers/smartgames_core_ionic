@@ -33,10 +33,6 @@
             <ion-label>Важное</ion-label>
           </ion-chip>
         </div>
-        
-        <div class="days-remaining" v-if="daysUntilEvent >= 0">
-          <DaysCounter :target-date="event.date" />
-        </div>
       </div>
       
       <!-- Информация о бюджете -->
@@ -109,9 +105,6 @@ import {
   wallet,
   people
 } from 'ionicons/icons';
-import { defineAsyncComponent } from 'vue';
-
-const DaysCounter = defineAsyncComponent(() => import('./DaysCounter.vue'));
 
 // Интерфейс события
 interface MemorialEvent {
@@ -185,13 +178,6 @@ const compactDate = computed(() => {
     month: '2-digit',
     year: '2-digit'
   });
-});
-
-const daysUntilEvent = computed(() => {
-  const today = new Date();
-  const eventDate = new Date(props.event.date);
-  const diffTime = eventDate.getTime() - today.getTime();
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 });
 
 // Методы

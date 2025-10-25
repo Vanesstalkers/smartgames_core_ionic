@@ -60,6 +60,7 @@
     <ion-fab-button 
       @click="toggleStatus"
       class="pwa-status-fab"
+      style="display: none;"
     >
       <ion-icon :icon="showStatus ? closeCircleOutline : checkmarkCircleOutline"></ion-icon>
     </ion-fab-button>

@@ -12,11 +12,11 @@
     </ion-header>
     
     <ion-content :fullscreen="true">
-      <ion-header collapse="condense">
+      <!-- <ion-header collapse="condense">
         <ion-toolbar>
           <ion-title size="large">Памятные даты</ion-title>
         </ion-toolbar>
-      </ion-header>
+      </ion-header> -->
 
       <!-- Управление балансом -->
       <BalanceCard />
@@ -26,9 +26,14 @@
       <PWAStatus />
       <PWAInstallInstructions />
 
+      <!-- Убрали компактные фильтры - теперь они в Bottom Sheet -->
+
       <!-- Компактная статистика -->
       <div class="compact-stats">
         <ion-card>
+          <ion-card-header>
+            <ion-card-title>События</ion-card-title>
+          </ion-card-header>
           <ion-card-content>
             <div class="stats-row">
               <div class="stat-item">
@@ -37,51 +42,16 @@
                 <small>Всего</small>
               </div>
               <div class="stat-item">
-                <ion-icon :icon="notificationsOutline" color="warning"></ion-icon>
-                <span>{{ upcomingEvents.length }}</span>
-                <small>Предстоящих</small>
-              </div>
-              <div class="stat-item">
                 <ion-icon :icon="heartOutline" color="danger"></ion-icon>
                 <span>{{ importantEvents }}</span>
                 <small>Важных</small>
               </div>
+              <div class="stat-item">
+                <ion-icon :icon="notificationsOutline" color="warning"></ion-icon>
+                <span>{{ upcomingEvents.length }}</span>
+                <small>Скоро</small>
+              </div>
             </div>
-          </ion-card-content>
-        </ion-card>
-      </div>
-
-      <!-- Компактные фильтры -->
-      <div class="compact-filters">
-        <ion-card>
-          <ion-card-content>
-            <div class="filters-row">
-              <ion-searchbar v-model="searchQuery" placeholder="Поиск событий" class="compact-search" />
-              <ion-select v-model="selectedCategory" placeholder="Категория" interface="popover">
-                <ion-select-option value="">Все</ion-select-option>
-                <ion-select-option v-for="c in categories" :key="c" :value="c">{{ c }}</ion-select-option>
-              </ion-select>
-              <ion-button 
-                :fill="showImportantOnly ? 'solid' : 'outline'" 
-                :color="showImportantOnly ? 'warning' : 'medium'"
-                @click="showImportantOnly = !showImportantOnly"
-                size="small"
-              >
-                <ion-icon :icon="heartOutline" slot="start"></ion-icon>
-                Важные
-              </ion-button>
-            </div>
-          </ion-card-content>
-        </ion-card>
-      </div>
-
-      <!-- Ближайшие события -->
-      <div class="upcoming-events">
-        <ion-card>
-          <ion-card-header>
-            <ion-card-title>Ближайшие события</ion-card-title>
-          </ion-card-header>
-          <ion-card-content>
             <div v-if="upcomingEvents.length === 0" class="empty-state">
               <ion-icon :icon="calendarOutline" size="large"></ion-icon>
               <p>Нет предстоящих событий</p>
@@ -89,39 +59,13 @@
                 Добавить событие
               </ion-button>
             </div>
-            <EventCard 
+            <EventCardCompact 
               v-for="event in upcomingEvents" 
               :key="event.id" 
               :event="event"
               @edit="editEvent"
               @delete="deleteEvent"
             />
-          </ion-card-content>
-        </ion-card>
-      </div>
-
-      <!-- Компактные быстрые действия -->
-      <div class="quick-actions">
-        <ion-card>
-          <ion-card-content>
-            <div class="actions-grid">
-              <ion-button expand="block" fill="outline" @click="openAddEventModal" class="action-button">
-                <ion-icon :icon="add" slot="start"></ion-icon>
-                Добавить
-              </ion-button>
-              <ion-button expand="block" fill="outline" router-link="/tabs/calendar" class="action-button">
-                <ion-icon :icon="calendar" slot="start"></ion-icon>
-                Календарь
-              </ion-button>
-              <ion-button expand="block" fill="outline" router-link="/tabs/events" class="action-button">
-                <ion-icon :icon="list" slot="start"></ion-icon>
-                Все события
-              </ion-button>
-              <ion-button expand="block" fill="outline" router-link="/tabs/settings" class="action-button">
-                <ion-icon :icon="settings" slot="start"></ion-icon>
-                Настройки
-              </ion-button>
-            </div>
           </ion-card-content>
         </ion-card>
       </div>
@@ -134,6 +78,62 @@
       @close="closeAddEventModal"
       @save="saveEvent"
     />
+
+    <!-- FAB для поиска -->
+    <ion-fab vertical="bottom" horizontal="end" slot="fixed">
+      <ion-fab-button @click="openSearchBottomSheet">
+        <ion-icon :icon="search"></ion-icon>
+      </ion-fab-button>
+    </ion-fab>
+
+    <!-- Bottom Sheet с поиском и фильтрами -->
+    <ion-modal 
+      :is-open="isSearchBottomSheetOpen" 
+      :initial-breakpoint="0.3" 
+      :breakpoints="[0, 0.3, 0.7, 1]"
+      @did-dismiss="closeSearchBottomSheet"
+    >
+      <ion-content>
+        <div class="bottom-sheet-content">
+          <div class="handle"></div>
+          <div class="search-section">
+            <h3>Поиск и фильтры</h3>
+            <ion-searchbar 
+              v-model="searchQuery" 
+              placeholder="Поиск событий"
+              @ion-input="onSearchInput"
+            />
+          </div>
+          
+          <div class="filters-section">
+            <ion-item>
+              <ion-label>Категория</ion-label>
+              <ion-select v-model="selectedCategory" placeholder="Все категории" interface="popover">
+                <ion-select-option value="">Все</ion-select-option>
+                <ion-select-option v-for="c in categories" :key="c" :value="c">{{ c }}</ion-select-option>
+              </ion-select>
+            </ion-item>
+            
+            <ion-item button @click="showImportantOnly = !showImportantOnly">
+              <ion-icon :icon="heartOutline" :color="showImportantOnly ? 'warning' : 'medium'"></ion-icon>
+              <ion-label>Только важные события</ion-label>
+              <ion-checkbox :checked="showImportantOnly" slot="end"></ion-checkbox>
+            </ion-item>
+          </div>
+
+          <div class="search-actions">
+            <ion-button expand="block" fill="outline" @click="clearFilters">
+              <ion-icon :icon="refresh" slot="start"></ion-icon>
+              Сбросить фильтры
+            </ion-button>
+            <ion-button expand="block" @click="applyFilters">
+              <ion-icon :icon="checkmark" slot="start"></ion-icon>
+              Применить
+            </ion-button>
+          </div>
+        </div>
+      </ion-content>
+    </ion-modal>
   </ion-page>
 </template>
 
@@ -152,19 +152,25 @@ import {
   IonButtons,
   IonButton,
   IonIcon,
+  IonFab,
+  IonFabButton,
+  IonModal,
+  IonItem,
+  IonLabel,
+  IonCheckbox
 } from '@ionic/vue';
 import { 
   add, 
   calendarOutline, 
   notificationsOutline, 
   heartOutline,
-  calendar,
-  list,
-  settings
+  search,
+  refresh,
+  checkmark
 } from 'ionicons/icons';
 import { defineAsyncComponent } from 'vue';
 import { IonSearchbar, IonSelect, IonSelectOption } from '@ionic/vue';
-import EventCard from '@/components/EventCard.vue';
+import EventCardCompact from '@/components/EventCardCompact.vue';
 import BalanceCard from '@/components/BalanceCard.vue';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt.vue';
 import PWAStatus from '@/components/PWAStatus.vue';
@@ -188,6 +194,8 @@ interface MemorialEvent {
 const isAddEventModalOpen = ref(false);
 const editingEvent = ref<MemorialEvent | null>(null);
 const events = eventsStore.events;
+const isSearchBottomSheetOpen = ref(false);
+
 // Filters
 const searchQuery = ref('');
 const selectedCategory = ref(''); // empty = all
@@ -272,6 +280,30 @@ const deleteEvent = (eventId: string) => {
   }
 };
 
+// Методы для Bottom Sheet поиска
+const openSearchBottomSheet = () => {
+  isSearchBottomSheetOpen.value = true;
+};
+
+const closeSearchBottomSheet = () => {
+  isSearchBottomSheetOpen.value = false;
+};
+
+const onSearchInput = (event: any) => {
+  searchQuery.value = event.detail.value;
+};
+
+const clearFilters = () => {
+  searchQuery.value = '';
+  selectedCategory.value = '';
+  showImportantOnly.value = false;
+};
+
+const applyFilters = () => {
+  // Фильтры уже применяются автоматически через computed свойства
+  closeSearchBottomSheet();
+};
+
 // Загрузка данных при монтировании
 onMounted(() => {
   // Инициализируем тестовые данные, если localStorage пуст
@@ -325,12 +357,13 @@ onMounted(() => {
   display: flex;
   gap: 8px;
   align-items: center;
-  flex-wrap: wrap;
+  overflow-x: auto;
+  white-space: nowrap;
 }
 
 .compact-search {
-  flex: 1;
-  min-width: 200px;
+  width: 100%;
+  margin-bottom: 12px;
 }
 
 .filters-row ion-select {
@@ -367,12 +400,59 @@ onMounted(() => {
   }
   
   .filters-row {
-    flex-direction: column;
-    align-items: stretch;
+    gap: 6px;
   }
   
   .compact-search {
-    min-width: auto;
+    margin-bottom: 8px;
   }
+}
+
+/* Bottom Sheet стили */
+.bottom-sheet-content {
+  padding: 16px;
+  min-height: 200px;
+}
+
+.handle {
+  width: 40px;
+  height: 4px;
+  background: var(--ion-color-medium);
+  border-radius: 2px;
+  margin: 0 auto 16px;
+}
+
+.search-section h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ion-color-dark);
+}
+
+.filters-section {
+  margin: 16px 0;
+}
+
+.filters-section ion-item {
+  --padding-start: 0;
+  --padding-end: 0;
+  margin-bottom: 8px;
+}
+
+.search-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.search-actions ion-button {
+  flex: 1;
+}
+
+/* FAB стили */
+ion-fab-button {
+  --background: var(--ion-color-primary);
+  --background-activated: var(--ion-color-primary-shade);
+  --background-hover: var(--ion-color-primary-tint);
 }
 </style>
