@@ -217,6 +217,7 @@ import PWAStatus from '@/components/PWAStatus.vue';
 import PWAInstallInstructions from '@/components/PWAInstallInstructions.vue';
 const AddEventModal = defineAsyncComponent(() => import('../components/AddEventModal.vue'));
 import eventsStore from '@/store/events';
+import contactsStore from '@/store/contacts';
 
 // Интерфейс события
 interface MemorialEvent {
@@ -399,7 +400,17 @@ const handleTouchEnd = () => {
 // Загрузка данных при монтировании
 onMounted(() => {
   // Инициализируем тестовые данные, если localStorage пуст
+  contactsStore.ensureSampleData();
   eventsStore.ensureSampleData();
+  
+  // Создаем события дней рождения для контактов, у которых их еще нет
+  const contactsWithBirthday = contactsStore.contacts.value.filter(c => c.birthday);
+  contactsWithBirthday.forEach(contact => {
+    const existingEvent = eventsStore.getBirthdayEvent(contact.id);
+    if (!existingEvent) {
+      eventsStore.createBirthdayEvent(contact);
+    }
+  });
 });
 </script>
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import {
   IonCard,
   IonCardContent,
@@ -17,16 +18,24 @@ import {
   calendar
 } from 'ionicons/icons';
 import type { Contact } from '@/store/contacts';
+import eventsStore from '@/store/events';
 
 interface Props {
   contact: Contact;
   showActions?: boolean;
   compact?: boolean;
+  isNew?: boolean;
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   showActions: true,
-  compact: false
+  compact: false,
+  isNew: false
+});
+
+// Получаем событие дня рождения для контакта
+const birthdayEvent = computed(() => {
+  return eventsStore.getBirthdayEvent(props.contact.id);
 });
 
 const emit = defineEmits<{
@@ -35,6 +44,7 @@ const emit = defineEmits<{
   email: [contact: Contact];
   edit: [contact: Contact];
   delete: [contact: Contact];
+  'view-event': [event: any];
 }>();
 
 // Функция для форматирования номера телефона для отображения
@@ -149,10 +159,22 @@ function getCategoryColor(category: string): string {
   return colors[category] || 'medium';
 }
 
+// Функция для форматирования бюджета
+function formatBudget(budget?: number): string {
+  if (!budget || budget === 0) return '';
+  
+  return new Intl.NumberFormat('ru-RU', {
+    style: 'currency',
+    currency: 'RUB',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(budget);
+}
+
 </script>
 
 <template>
-  <ion-card class="contact-card" :class="{ compact }">
+  <ion-card class="contact-card" :class="{ compact, 'new-contact': isNew }">
     <ion-card-content>
       <div class="contact-header">
         <div class="contact-info">
@@ -192,6 +214,24 @@ function getCategoryColor(category: string): string {
             >
               {{ getDaysUntilBirthdayText(contact.birthday) }}
             </ion-badge>
+            <ion-button 
+              v-if="birthdayEvent"
+              fill="clear"
+              size="small"
+              class="event-link-button"
+              @click="emit('view-event', birthdayEvent)"
+            >
+              <ion-icon :icon="calendar" size="small"></ion-icon>
+            </ion-button>
+          </p>
+          
+          <!-- Отображение бюджета события дня рождения -->
+          <p v-if="birthdayEvent && birthdayEvent.budget && birthdayEvent.budget > 0" class="contact-budget">
+            <span class="budget-label">Бюджет:</span>
+            <span class="budget-amount">{{ formatBudget(birthdayEvent.budget) }}</span>
+            <span v-if="birthdayEvent.spent && birthdayEvent.spent > 0" class="spent-amount">
+              (потрачено: {{ formatBudget(birthdayEvent.spent) }})
+            </span>
           </p>
           
           <p v-if="contact.notes && !compact" class="contact-notes">
@@ -262,7 +302,8 @@ function getCategoryColor(category: string): string {
 
 .contact-phone,
 .contact-email,
-.contact-birthday {
+.contact-birthday,
+.contact-budget {
   display: flex;
   align-items: center;
   margin: 2px 0;
@@ -274,11 +315,48 @@ function getCategoryColor(category: string): string {
   gap: 8px;
 }
 
+.contact-budget {
+  gap: 8px;
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: rgba(var(--ion-color-success-rgb), 0.1);
+  border-radius: 8px;
+  border-left: 3px solid var(--ion-color-success);
+}
+
+.budget-label {
+  font-weight: 500;
+  color: var(--ion-color-success);
+}
+
+.budget-amount {
+  font-weight: 600;
+  color: var(--ion-color-success);
+  font-size: 0.95rem;
+}
+
+.spent-amount {
+  font-size: 0.85rem;
+  color: var(--ion-color-medium);
+  font-style: italic;
+  margin-left: 4px;
+}
+
 .birthday-badge {
   font-size: 0.75rem;
   height: 20px;
   --padding-start: 6px;
   --padding-end: 6px;
+}
+
+.event-link-button {
+  --padding-start: 4px;
+  --padding-end: 4px;
+  --padding-top: 4px;
+  --padding-bottom: 4px;
+  min-width: 24px;
+  height: 24px;
+  margin-left: 4px;
 }
 
 .contact-icon {
@@ -317,6 +395,28 @@ function getCategoryColor(category: string): string {
   --padding-bottom: 8px;
   min-width: 32px;
   height: 32px;
+}
+
+/* Анимация для новых контактов */
+.new-contact {
+  animation: highlightNewContact 3s ease-in-out;
+  border: 2px solid var(--ion-color-success);
+  box-shadow: 0 0 20px rgba(var(--ion-color-success-rgb), 0.3);
+}
+
+@keyframes highlightNewContact {
+  0% {
+    background-color: rgba(var(--ion-color-success-rgb), 0.1);
+    transform: scale(1.02);
+  }
+  50% {
+    background-color: rgba(var(--ion-color-success-rgb), 0.05);
+    transform: scale(1.01);
+  }
+  100% {
+    background-color: transparent;
+    transform: scale(1);
+  }
 }
 
 

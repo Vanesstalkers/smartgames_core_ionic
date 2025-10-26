@@ -24,6 +24,7 @@ import {
 } from "ionicons/icons";
 import { pickerController } from "@ionic/vue";
 import eventsStore from "@/store/events";
+import contactsStore from "@/store/contacts";
 import type { MemorialEvent } from "@/store/events";
 import AddEventModal from "@/components/AddEventModal.vue";
 
@@ -31,11 +32,18 @@ import AddEventModal from "@/components/AddEventModal.vue";
 const events = eventsStore.events;
 
 // Инициализируем тестовые данные, если store пустой
+contactsStore.ensureSampleData();
 eventsStore.ensureSampleData();
 
-// Отладочная информация
-console.log("Все события в календаре:", events.value);
-console.log("Количество событий:", events.value.length);
+// Создаем события дней рождения для контактов
+const contactsWithBirthday = contactsStore.contacts.value.filter(c => c.birthday);
+contactsWithBirthday.forEach(contact => {
+  const existingEvent = eventsStore.getBirthdayEvent(contact.id);
+  if (!existingEvent) {
+    eventsStore.createBirthdayEvent(contact);
+  }
+});
+
 
 // calendar state: viewed month (текущий год)
 const view = ref(new Date());
@@ -51,6 +59,23 @@ const isAddEventModalOpen = ref(false);
 const newEventDate = ref<string | null>(null);
 
 const weekdays = ["ПН", "ВТ", "СР", "Чт", "Пт", "Сб", "Вс"];
+
+// Функция для преобразования цветовых схем Ionic в CSS-цвета
+function getEventColor(colorScheme: string): string {
+  const colorMap: Record<string, string> = {
+    'primary': '#3880ff',
+    'secondary': '#3dc2ff',
+    'tertiary': '#5260ff',
+    'success': '#2dd36f',
+    'warning': '#ffc409',
+    'danger': '#eb445a',
+    'light': '#f4f5f8',
+    'medium': '#92949c',
+    'dark': '#222428'
+  };
+  
+  return colorMap[colorScheme] || '#3880ff'; // По умолчанию primary
+}
 
 // Функции навигации по календарю
 const prevMonth = () => {
@@ -91,6 +116,7 @@ const calendarCells = computed(() => {
     
     const cellEvents = events.value.filter((ev) => ev.date === iso);
     const dayOfWeek = d.getDay();
+    
 
 
     cells.push({
@@ -279,7 +305,7 @@ const openYearPicker = async () => {
                 v-for="(event, index) in cell.events.slice(0, 3)"
                 :key="index"
                 class="dot"
-                :style="{ backgroundColor: event.color }"
+                :style="{ backgroundColor: getEventColor(event.color) }"
                 :title="event.title"
               >
               </span>
@@ -544,6 +570,7 @@ const openYearPicker = async () => {
   height: 8px;
   border-radius: 50%;
   display: inline-block;
+  background-color: #3880ff; /* Fallback цвет */
 }
 
 /* Модальное окно */

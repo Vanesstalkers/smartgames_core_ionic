@@ -14,6 +14,7 @@ export interface MemorialEvent {
   budget?: number; // Бюджет для события
   spent?: number; // Потрачено на событие
   contacts?: Contact[]; // Список контактов для поздравления
+  relatedContactId?: string; // ID связанного контакта (для дней рождения)
 }
 
 export interface Contact {
@@ -146,6 +147,87 @@ function removeContactFromEvent(eventId: string, contactName: string) {
   }
 }
 
+// Создание события дня рождения для контакта
+function createBirthdayEvent(contact: any): string {
+  if (!contact.birthday) {
+    return '';
+  }
+  
+  const birthdayDate = new Date(contact.birthday + 'T12:00:00.000Z'); // Создаем в UTC
+  const currentYear = new Date().getFullYear();
+  
+  // Устанавливаем текущий год для дня рождения
+  const thisYearBirthday = new Date(Date.UTC(currentYear, birthdayDate.getUTCMonth(), birthdayDate.getUTCDate()));
+  
+  // Если день рождения уже прошел в этом году, берем следующий год
+  const today = new Date();
+  const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+  
+  if (thisYearBirthday < todayUTC) {
+    thisYearBirthday.setUTCFullYear(currentYear + 1);
+  }
+  
+  const eventId = `birthday_${contact.id}_${Date.now()}`;
+  const event: MemorialEvent = {
+    id: eventId,
+    title: `День рождения: ${contact.name}`,
+    date: thisYearBirthday.toISOString().split('T')[0],
+    description: `Поздравить ${contact.name} с днем рождения`,
+    category: 'День рождения',
+    isImportant: true,
+    reminderDays: [7, 1], // Напоминания за неделю и за день
+    color: 'primary',
+    budget: 0,
+    spent: 0,
+    relatedContactId: contact.id
+  };
+  
+  events.value.push(event);
+  save();
+  return eventId;
+}
+
+// Обновление события дня рождения при изменении контакта
+function updateBirthdayEvent(contact: any) {
+  if (!contact.birthday) {
+    // Удаляем событие дня рождения, если дата рождения удалена
+    events.value = events.value.filter(e => e.relatedContactId !== contact.id);
+    save();
+    return;
+  }
+  
+  // Ищем существующее событие дня рождения
+  const existingEvent = events.value.find(e => e.relatedContactId === contact.id);
+  
+  if (existingEvent) {
+    // Обновляем существующее событие
+    const birthdayDate = new Date(contact.birthday + 'T12:00:00.000Z'); // Создаем в UTC
+    const currentYear = new Date().getFullYear();
+    const thisYearBirthday = new Date(Date.UTC(currentYear, birthdayDate.getUTCMonth(), birthdayDate.getUTCDate()));
+    
+    const today = new Date();
+    const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+    
+    if (thisYearBirthday < todayUTC) {
+      thisYearBirthday.setUTCFullYear(currentYear + 1);
+    }
+    
+    existingEvent.title = `День рождения: ${contact.name}`;
+    existingEvent.date = thisYearBirthday.toISOString().split('T')[0];
+    existingEvent.description = `Поздравить ${contact.name} с днем рождения`;
+  } else {
+    // Создаем новое событие
+    createBirthdayEvent(contact);
+  }
+  
+  save();
+}
+
+// Получение события дня рождения для контакта
+function getBirthdayEvent(contactId: string): MemorialEvent | undefined {
+  return events.value.find(e => e.relatedContactId === contactId);
+}
+
 // Следим за изменениями и сохраняем
 watch(events, () => save(), { deep: true });
 
@@ -162,5 +244,8 @@ export default {
   ensureSampleData,
   getEventContacts,
   addContactToEvent,
-  removeContactFromEvent
+  removeContactFromEvent,
+  createBirthdayEvent,
+  updateBirthdayEvent,
+  getBirthdayEvent
 };

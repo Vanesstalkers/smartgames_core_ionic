@@ -1,4 +1,5 @@
 import { ref, watch } from 'vue';
+import eventsStore from './events';
 
 export interface Contact {
   id: string;
@@ -51,6 +52,7 @@ function ensureSampleData() {
         email: 'anna.petrova@example.com',
         notes: 'Сестра, день рождения 15 марта',
         category: 'Семья',
+        birthday: '1990-03-15',
         isFavorite: true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -62,6 +64,7 @@ function ensureSampleData() {
         email: 'mikhail.ivanov@example.com',
         notes: 'Коллега по работе',
         category: 'Коллеги',
+        birthday: '1985-07-22',
         isFavorite: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -73,6 +76,7 @@ function ensureSampleData() {
         email: 'elena.smirnova@example.com',
         notes: 'Лучшая подруга',
         category: 'Друзья',
+        birthday: '1992-12-10',
         isFavorite: true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -95,17 +99,30 @@ function addContact(contactData: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>
   };
   contacts.value.push(contact);
   save();
-  return contact.id;
+  
+  // Создаем событие дня рождения, если указана дата рождения
+  if (contact.birthday) {
+    eventsStore.createBirthdayEvent(contact);
+  }
+  
+  return contact;
 }
 
 function updateContact(updated: Contact) {
   const idx = contacts.value.findIndex(c => c.id === updated.id);
   if (idx > -1) {
+    const oldContact = contacts.value[idx];
     contacts.value[idx] = { 
       ...updated, 
       updatedAt: new Date().toISOString() 
     };
     save();
+    
+    // Обновляем событие дня рождения, если изменилась дата рождения
+    if (oldContact.birthday !== updated.birthday) {
+      eventsStore.updateBirthdayEvent(updated);
+    }
+    
     return true;
   }
   return false;

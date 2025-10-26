@@ -35,6 +35,17 @@
           <ion-icon :icon="calendarOutline" slot="end"></ion-icon>
         </ion-item>
         
+        <!-- Бюджет события -->
+        <ion-item>
+          <ion-label position="stacked">Бюджет события</ion-label>
+          <ion-input 
+            v-model="form.budget" 
+            type="number" 
+            placeholder="Укажите бюджет (необязательно)"
+            :min="0"
+          ></ion-input>
+        </ion-item>
+        
          <!-- Убираем отладочную информацию -->
         
         <!-- Описание -->
@@ -81,44 +92,6 @@
           </div>
         </ion-item>
         
-        <!-- Бюджет события -->
-        <ion-item>
-          <ion-label position="stacked">Бюджет события</ion-label>
-          <ion-input 
-            v-model="form.budget" 
-            type="number" 
-            placeholder="Укажите бюджет (необязательно)"
-            :min="0"
-          ></ion-input>
-        </ion-item>
-
-        <!-- Контакты для поздравления (только для праздников) -->
-        <div v-if="form.category === 'Праздник'" class="contacts-section">
-          <ion-item>
-            <ion-label>
-              <h3>Список для поздравления</h3>
-              <p>Добавьте людей, которых нужно поздравить</p>
-            </ion-label>
-          </ion-item>
-          
-          <ContactPicker v-model="form.contacts" />
-        </div>
-        
-        <!-- Цвет события -->
-        <ion-item>
-          <ion-label position="stacked">Цвет события</ion-label>
-          <div class="color-options">
-            <div 
-              v-for="color in colorOptions" 
-              :key="color.value"
-              class="color-option"
-              :class="{ active: form.color === color.value }"
-              :style="{ backgroundColor: color.value }"
-              @click="form.color = color.value"
-            ></div>
-          </div>
-        </ion-item>
-        
         <!-- Кнопки -->
         <div class="modal-buttons">
           <ion-button expand="block" fill="outline" @click="handleClose">
@@ -157,7 +130,6 @@ import {
 } from '@ionic/vue';
 import { close, calendarOutline } from 'ionicons/icons';
 import { pickerController } from '@ionic/vue';
-import ContactPicker from './ContactPicker.vue';
 
 // Интерфейс события
 interface MemorialEvent {
@@ -223,18 +195,6 @@ const reminderOptions = [
   { value: 3, label: 'за 3 дня' },
   { value: 1, label: 'за день' },
   { value: 0, label: 'в день' }
-];
-
-// Цветовые опции
-const colorOptions = [
-  { value: '#3880ff', label: 'Синий' },
-  { value: '#ff6b6b', label: 'Красный' },
-  { value: '#4ecdc4', label: 'Бирюзовый' },
-  { value: '#45b7d1', label: 'Голубой' },
-  { value: '#96ceb4', label: 'Зеленый' },
-  { value: '#feca57', label: 'Желтый' },
-  { value: '#ff9ff3', label: 'Розовый' },
-  { value: '#95a5a6', label: 'Серый' }
 ];
 
 // Колонки для picker даты
