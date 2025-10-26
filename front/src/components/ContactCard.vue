@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import {
   IonCard,
   IonCardContent,
-  IonItem,
-  IonLabel,
-  IonAvatar,
   IonIcon,
   IonButton,
-  IonChip
+  IonBadge
 } from '@ionic/vue';
 import {
   star,
-  starOutline,
   call,
   mail,
+  menu,
+  people,
+  person,
+  business,
+  calendar
 } from 'ionicons/icons';
 import type { Contact } from '@/store/contacts';
 
@@ -24,34 +24,118 @@ interface Props {
   compact?: boolean;
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   showActions: true,
   compact: false
 });
 
 const emit = defineEmits<{
-  toggleFavorite: [contact: Contact];
+  menu: [contact: Contact];
   call: [contact: Contact];
   email: [contact: Contact];
   edit: [contact: Contact];
   delete: [contact: Contact];
 }>();
 
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map(word => word.charAt(0))
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
+// Функция для форматирования номера телефона для отображения
+function formatPhoneDisplay(phone: string): string {
+  if (!phone) return '';
+  
+  // Удаляем все нецифровые символы
+  const numbers = phone.replace(/\D/g, '');
+  
+  // Если номер начинается с 8, заменяем на +7
+  let formatted = numbers;
+  if (formatted.startsWith('8') && formatted.length > 1) {
+    formatted = '7' + formatted.slice(1);
+  }
+  
+  // Если номер начинается с 7, добавляем +
+  if (formatted.startsWith('7') && formatted.length > 1) {
+    formatted = '+' + formatted;
+  }
+  
+  // Форматируем в зависимости от длины
+  if (formatted.length <= 1) {
+    return formatted;
+  } else if (formatted.length <= 2) {
+    return formatted;
+  } else if (formatted.length <= 5) {
+    return formatted.slice(0, 2) + ' (' + formatted.slice(2);
+  } else if (formatted.length <= 8) {
+    return formatted.slice(0, 2) + ' (' + formatted.slice(2, 5) + ') ' + formatted.slice(5);
+  } else if (formatted.length <= 10) {
+    return formatted.slice(0, 2) + ' (' + formatted.slice(2, 5) + ') ' + formatted.slice(5, 8) + '-' + formatted.slice(8);
+  } else {
+    return formatted.slice(0, 2) + ' (' + formatted.slice(2, 5) + ') ' + formatted.slice(5, 8) + '-' + formatted.slice(8, 10) + '-' + formatted.slice(10, 12);
+  }
 }
 
-function getCategoryIcon(category: string): string {
+// Функция для форматирования даты рождения
+function formatBirthday(birthday: string): string {
+  if (!birthday) return '';
+  
+  try {
+    const date = new Date(birthday);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    
+    return `${day}.${month}.${year}`;
+  } catch (error) {
+    return birthday; // Возвращаем исходную строку в случае ошибки
+  }
+}
+
+// Функция для расчета дней до дня рождения
+function getDaysUntilBirthday(birthday: string): number | null {
+  if (!birthday) return null;
+  
+  try {
+    const today = new Date();
+    const birthDate = new Date(birthday);
+    
+    // Устанавливаем текущий год для дня рождения
+    const currentYear = today.getFullYear();
+    const thisYearBirthday = new Date(currentYear, birthDate.getMonth(), birthDate.getDate());
+    
+    // Если день рождения уже прошел в этом году, берем следующий год
+    if (thisYearBirthday < today) {
+      thisYearBirthday.setFullYear(currentYear + 1);
+    }
+    
+    // Вычисляем разность в днях
+    const timeDiff = thisYearBirthday.getTime() - today.getTime();
+    const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    
+    return daysDiff;
+  } catch (error) {
+    return null;
+  }
+}
+
+// Функция для получения текста о днях до дня рождения
+function getDaysUntilBirthdayText(birthday: string): string {
+  const days = getDaysUntilBirthday(birthday);
+  if (days === null) return '';
+  
+  if (days === 0) {
+    return 'Сегодня!';
+  } else if (days === 1) {
+    return 'Завтра';
+  } else if (days <= 7) {
+    return `через ${days} дн.`;
+  } else {
+    return `через ${days} дн.`;
+  }
+}
+
+function getCategoryIcon(category: string) {
   switch (category) {
-    case 'Семья': return 'people';
-    case 'Друзья': return 'person';
-    case 'Коллеги': return 'business';
-    default: return 'person';
+    case 'Семья': return people;
+    case 'Друзья': return person;
+    case 'Коллеги': return business;
+    default: return person;
   }
 }
 
@@ -65,35 +149,32 @@ function getCategoryColor(category: string): string {
   return colors[category] || 'medium';
 }
 
-const hasContactInfo = computed(() => {
-  return props.contact.phone || props.contact.email;
-});
 </script>
 
 <template>
   <ion-card class="contact-card" :class="{ compact }">
     <ion-card-content>
-      <ion-item lines="none">
-        <ion-avatar slot="start">
-          <div class="avatar-placeholder">
-            {{ getInitials(contact.name) }}
-          </div>
-        </ion-avatar>
-
-        <ion-label>
+      <div class="contact-header">
+        <div class="contact-info">
           <h2 class="contact-name">
-            {{ contact.name }}
             <ion-icon
               v-if="contact.isFavorite"
               :icon="star"
               color="warning"
               class="favorite-icon"
             ></ion-icon>
+            <ion-icon
+              v-if="contact.category"
+              :icon="getCategoryIcon(contact.category)"
+              :color="getCategoryColor(contact.category)"
+              class="category-icon"
+            ></ion-icon>
+            {{ contact.name }}
           </h2>
           
           <p v-if="contact.phone" class="contact-phone">
             <ion-icon :icon="call" class="contact-icon"></ion-icon>
-            {{ contact.phone }}
+            {{ formatPhoneDisplay(contact.phone) }}
           </p>
           
           <p v-if="contact.email" class="contact-email">
@@ -101,58 +182,37 @@ const hasContactInfo = computed(() => {
             {{ contact.email }}
           </p>
           
+          <p v-if="contact.birthday" class="contact-birthday">
+            <ion-icon :icon="calendar" class="contact-icon"></ion-icon>
+            {{ formatBirthday(contact.birthday) }}
+            <ion-badge 
+              v-if="getDaysUntilBirthday(contact.birthday) !== null"
+              :color="getDaysUntilBirthday(contact.birthday)! <= 7 ? 'warning' : 'light'"
+              class="birthday-badge"
+            >
+              {{ getDaysUntilBirthdayText(contact.birthday) }}
+            </ion-badge>
+          </p>
+          
           <p v-if="contact.notes && !compact" class="contact-notes">
             {{ contact.notes }}
           </p>
-        </ion-label>
-
-        <div slot="end" class="contact-meta">
-          <ion-chip 
-            v-if="contact.category" 
-            :color="getCategoryColor(contact.category)"
-            class="category-chip"
-          >
-            <ion-icon :icon="getCategoryIcon(contact.category)"></ion-icon>
-            {{ contact.category }}
-          </ion-chip>
         </div>
-      </ion-item>
-
-      <!-- Действия с контактом -->
-      <div v-if="showActions && hasContactInfo" class="contact-actions">
-        <ion-button
-          v-if="contact.phone"
-          fill="outline"
-          size="small"
-          @click="emit('call', contact)"
-        >
-          <ion-icon :icon="call" slot="start"></ion-icon>
-          Позвонить
-        </ion-button>
         
         <ion-button
-          v-if="contact.email"
-          fill="outline"
+          v-if="showActions"
+          fill="clear"
           size="small"
-          @click="emit('email', contact)"
-        >
-          <ion-icon :icon="mail" slot="start"></ion-icon>
-          Написать
-        </ion-button>
-        
-        <ion-button
-          fill="outline"
-          size="small"
-          @click="emit('toggleFavorite', contact)"
+          class="action-button"
+          @click="emit('menu', contact)"
         >
           <ion-icon 
-            :icon="contact.isFavorite ? star : starOutline" 
-            slot="start"
-            :color="contact.isFavorite ? 'warning' : 'medium'"
+            :icon="menu" 
+            color="medium"
           ></ion-icon>
-          {{ contact.isFavorite ? 'Из избранного' : 'В избранное' }}
         </ion-button>
       </div>
+
     </ion-card-content>
   </ion-card>
 </template>
@@ -191,17 +251,34 @@ const hasContactInfo = computed(() => {
 }
 
 .favorite-icon {
-  margin-left: 8px;
+  margin-right: 8px;
+  font-size: 1rem;
+}
+
+.category-icon {
+  margin-right: 8px;
   font-size: 1rem;
 }
 
 .contact-phone,
-.contact-email {
+.contact-email,
+.contact-birthday {
   display: flex;
   align-items: center;
   margin: 2px 0;
   font-size: 0.9rem;
   color: var(--ion-color-step-600);
+}
+
+.contact-birthday {
+  gap: 8px;
+}
+
+.birthday-badge {
+  font-size: 0.75rem;
+  height: 20px;
+  --padding-start: 6px;
+  --padding-end: 6px;
 }
 
 .contact-icon {
@@ -217,50 +294,30 @@ const hasContactInfo = computed(() => {
   font-style: italic;
 }
 
-.contact-meta {
+.contact-header {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+  position: relative;
 }
 
-.category-chip {
-  --background: var(--ion-color-light);
-  --color: var(--ion-color-dark);
-  font-size: 0.75rem;
-  height: 24px;
-}
-
-.contact-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-  flex-wrap: wrap;
-}
-
-.contact-actions ion-button {
+.contact-info {
   flex: 1;
-  min-width: 0;
+  margin-right: 12px;
 }
 
-/* Цвета для категорий */
-ion-chip[color="primary"] {
-  --background: var(--ion-color-primary);
-  --color: white;
+.action-button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  --padding-start: 8px;
+  --padding-end: 8px;
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+  min-width: 32px;
+  height: 32px;
 }
 
-ion-chip[color="secondary"] {
-  --background: var(--ion-color-secondary);
-  --color: white;
-}
 
-ion-chip[color="tertiary"] {
-  --background: var(--ion-color-tertiary);
-  --color: white;
-}
-
-ion-chip[color="medium"] {
-  --background: var(--ion-color-medium);
-  --color: white;
-}
 </style>

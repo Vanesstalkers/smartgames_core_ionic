@@ -19,7 +19,9 @@ import {
   IonActionSheet,
   IonAlert,
   IonRefresher,
-  IonRefresherContent
+  IonRefresherContent,
+  IonBadge,
+  IonNote,
 } from "@ionic/vue";
 import {
   add,
@@ -29,7 +31,11 @@ import {
   mail,
   create,
   trash,
-  person
+  person,
+  search,
+  refresh,
+  checkmark,
+  close,
 } from "ionicons/icons";
 import contactsStore from "@/store/contacts";
 import type { Contact } from "@/store/contacts";
@@ -53,6 +59,14 @@ const selectedContact = ref<Contact | null>(null);
 const isDeleteAlertOpen = ref(false);
 const contactToDelete = ref<string | null>(null);
 
+// Состояние для Bottom Sheet
+const isSearchBottomSheetOpen = ref(false);
+
+// Состояние для жестов
+const touchStartY = ref(0);
+const touchStartTime = ref(0);
+const isDragging = ref(false);
+
 // Удаляем старую форму, теперь используется компонент ContactForm
 
 // Категории контактов
@@ -61,7 +75,7 @@ const categories = [
   { value: "Семья", label: "Семья" },
   { value: "Друзья", label: "Друзья" },
   { value: "Коллеги", label: "Коллеги" },
-  { value: "Другое", label: "Другое" }
+  { value: "Другое", label: "Другое" },
 ];
 
 // Отфильтрованные контакты
@@ -70,14 +84,14 @@ const filteredContacts = computed(() => {
 
   // Фильтр по категории
   if (selectedCategory.value !== "all") {
-    result = result.filter(c => c.category === selectedCategory.value);
+    result = result.filter((c) => c.category === selectedCategory.value);
   }
 
   // Поиск
   if (searchQuery.value.trim()) {
     result = contactsStore.searchContacts(searchQuery.value);
     if (selectedCategory.value !== "all") {
-      result = result.filter(c => c.category === selectedCategory.value);
+      result = result.filter((c) => c.category === selectedCategory.value);
     }
   }
 
@@ -89,13 +103,26 @@ const filteredContacts = computed(() => {
   });
 });
 
+// Проверяем, есть ли активные фильтры
+const hasActiveFilters = computed(() => {
+  return searchQuery.value.trim() !== "" || selectedCategory.value !== "all";
+});
+
+// Подсчитываем количество активных фильтров
+const getActiveFiltersCount = computed(() => {
+  let count = 0;
+  if (searchQuery.value.trim() !== "") count++;
+  if (selectedCategory.value !== "all") count++;
+  return count;
+});
+
 // Статистика
 const stats = computed(() => {
   const total = contacts.value.length;
-  const favorites = contacts.value.filter(c => c.isFavorite).length;
-  const byCategory = categories.slice(1).map(cat => ({
+  const favorites = contacts.value.filter((c) => c.isFavorite).length;
+  const byCategory = categories.slice(1).map((cat) => ({
     name: cat.label,
-    count: contacts.value.filter(c => c.category === cat.value).length
+    count: contacts.value.filter((c) => c.category === cat.value).length,
   }));
 
   return { total, favorites, byCategory };
@@ -118,12 +145,14 @@ function closeModals() {
   editingContact.value = null;
 }
 
-function saveContact(contactData: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>) {
+function saveContact(
+  contactData: Omit<Contact, "id" | "createdAt" | "updatedAt">,
+) {
   if (editingContact.value) {
     // Редактирование
     const updated: Contact = {
       ...editingContact.value,
-      ...contactData
+      ...contactData,
     };
     contactsStore.updateContact(updated);
   } else {
@@ -138,15 +167,20 @@ function toggleFavorite(contact: Contact) {
   contactsStore.toggleFavorite(contact.id);
 }
 
+function openContactMenu(contact: Contact) {
+  selectedContact.value = contact;
+  isActionSheetOpen.value = true;
+}
+
 function callContact(contact: Contact) {
   if (contact.phone) {
-    window.open(`tel:${contact.phone}`, '_self');
+    window.open(`tel:${contact.phone}`, "_self");
   }
 }
 
 function emailContact(contact: Contact) {
   if (contact.email) {
-    window.open(`mailto:${contact.email}`, '_self');
+    window.open(`mailto:${contact.email}`, "_self");
   }
 }
 
@@ -171,8 +205,58 @@ function handleRefresh(event: CustomEvent) {
   }, 1000);
 }
 
+// Методы для Bottom Sheet поиска
+function openSearchBottomSheet() {
+  isSearchBottomSheetOpen.value = true;
+}
+
+function closeSearchBottomSheet() {
+  isSearchBottomSheetOpen.value = false;
+}
+
+function onSearchInput(event: any) {
+  searchQuery.value = event.detail.value;
+}
+
+function clearFilters() {
+  searchQuery.value = "";
+  selectedCategory.value = "all";
+}
+
+function applyFilters() {
+  // Фильтры уже применяются автоматически через computed свойства
+  closeSearchBottomSheet();
+}
+
+// Обработчики жестов для ручки Bottom Sheet
+function handleTouchStart(event: TouchEvent) {
+  if (isSearchBottomSheetOpen.value) return;
+
+  touchStartY.value = event.touches[0].clientY;
+  touchStartTime.value = Date.now();
+  isDragging.value = false;
+}
+
+function handleTouchMove(event: TouchEvent) {
+  if (isSearchBottomSheetOpen.value) return;
+
+  const currentY = event.touches[0].clientY;
+  const deltaY = touchStartY.value - currentY;
+  const deltaTime = Date.now() - touchStartTime.value;
+
+  // Если свайп вверх больше 30px и быстрее 300ms
+  if (deltaY > 30 && deltaTime < 300) {
+    isDragging.value = true;
+    openSearchBottomSheet();
+  }
+}
+
+function handleTouchEnd() {
+  isDragging.value = false;
+}
+
 onMounted(() => {
-  console.log('Контакты загружены:', contacts.value.length);
+  console.log("Контакты загружены:", contacts.value.length);
 });
 </script>
 
@@ -198,7 +282,11 @@ onMounted(() => {
                 <div class="stat-number">{{ stats.favorites }}</div>
                 <div class="stat-label">Избранные</div>
               </div>
-              <div class="stat-item" v-for="cat in stats.byCategory" :key="cat.name">
+              <div
+                class="stat-item"
+                v-for="cat in stats.byCategory"
+                :key="cat.name"
+              >
                 <div class="stat-number">{{ cat.count }}</div>
                 <div class="stat-label">{{ cat.name }}</div>
               </div>
@@ -207,27 +295,26 @@ onMounted(() => {
         </ion-card>
       </div>
 
-      <!-- Поиск и фильтры -->
-      <div class="search-container">
-        <ion-searchbar
-          v-model="searchQuery"
-          placeholder="Поиск контактов..."
-          :debounce="300"
-        ></ion-searchbar>
-        
-        <ion-select
-          v-model="selectedCategory"
-          placeholder="Категория"
-          interface="popover"
-        >
-          <ion-select-option
-            v-for="category in categories"
-            :key="category.value"
-            :value="category.value"
-          >
-            {{ category.label }}
-          </ion-select-option>
-        </ion-select>
+      <!-- Постоянно видимая ручка Bottom Sheet -->
+      <div
+        class="bottom-sheet-handle"
+        @click="openSearchBottomSheet"
+        @touchstart="handleTouchStart"
+        @touchmove="handleTouchMove"
+        @touchend="handleTouchEnd"
+        :class="{
+          'modal-open': isSearchBottomSheetOpen,
+          dragging: isDragging,
+        }"
+      >
+        <div class="handle-bar"></div>
+        <div class="handle-content">
+          <ion-icon :icon="search" size="small"></ion-icon>
+          <span>Поиск и фильтры</span>
+          <ion-badge v-if="hasActiveFilters" color="primary">{{
+            getActiveFiltersCount
+          }}</ion-badge>
+        </div>
       </div>
 
       <!-- Список контактов -->
@@ -248,7 +335,7 @@ onMounted(() => {
           :key="contact.id"
           :contact="contact"
           :show-actions="true"
-          @toggle-favorite="toggleFavorite"
+          @menu="openContactMenu"
           @call="callContact"
           @email="emailContact"
           @edit="openEditModal"
@@ -262,13 +349,88 @@ onMounted(() => {
         </ion-fab-button>
       </ion-fab>
 
+      <!-- Bottom Sheet с поиском и фильтрами -->
+      <ion-modal
+        :is-open="isSearchBottomSheetOpen"
+        :initial-breakpoint="0.4"
+        :breakpoints="[0, 0.4, 0.8, 1]"
+        @did-dismiss="closeSearchBottomSheet"
+      >
+        <ion-content>
+          <!-- Ручка внутри модального окна -->
+          <div class="bottom-sheet-handle-modal">
+            <div class="handle-bar"></div>
+            <div class="handle-content">
+              <ion-icon :icon="search" size="small"></ion-icon>
+              <span>Поиск и фильтры</span>
+              <ion-badge v-if="hasActiveFilters" color="primary">{{
+                getActiveFiltersCount
+              }}</ion-badge>
+            </div>
+          </div>
+
+          <div class="bottom-sheet-content">
+            <div class="search-section">
+              <ion-searchbar
+                v-model="searchQuery"
+                placeholder="Поиск контактов"
+                @ion-input="onSearchInput"
+              />
+              <div class="search-results-info">
+                <ion-note>
+                  Отфильтровано: {{ filteredContacts.length }} из
+                  {{ contacts.length }} контактов
+                </ion-note>
+              </div>
+            </div>
+
+            <div class="filters-section">
+              <ion-item>
+                <ion-label>Категория</ion-label>
+                <ion-select
+                  v-model="selectedCategory"
+                  placeholder="Все категории"
+                  interface="popover"
+                >
+                  <ion-select-option value="all">Все</ion-select-option>
+                  <ion-select-option
+                    v-for="c in categories.slice(1)"
+                    :key="c.value"
+                    :value="c.value"
+                    >{{ c.label }}</ion-select-option
+                  >
+                </ion-select>
+              </ion-item>
+            </div>
+
+            <div class="search-actions">
+              <ion-button expand="block" fill="outline" @click="clearFilters">
+                <ion-icon :icon="refresh" slot="start"></ion-icon>
+                Сбросить фильтры
+              </ion-button>
+              <ion-button expand="block" @click="applyFilters">
+                <ion-icon :icon="checkmark" slot="start"></ion-icon>
+                Применить
+              </ion-button>
+            </div>
+          </div>
+        </ion-content>
+      </ion-modal>
+
       <!-- Модальное окно добавления/редактирования контакта -->
-      <ion-modal :is-open="isAddModalOpen || isEditModalOpen" @did-dismiss="closeModals">
+      <ion-modal
+        :is-open="isAddModalOpen || isEditModalOpen"
+        @did-dismiss="closeModals"
+      >
         <ion-header>
           <ion-toolbar>
-            <ion-title>{{ editingContact ? 'Редактировать контакт' : 'Новый контакт' }}</ion-title>
+            <ion-title>{{
+              editingContact ? "Редактировать контакт" : "Новый контакт"
+            }}</ion-title>
             <ion-buttons slot="end">
-              <ion-button @click="closeModals">Закрыть</ion-button>
+              <ion-button @click="closeModals"
+                ><ion-icon :icon="close"></ion-icon
+              ></ion-button>
             </ion-buttons>
           </ion-toolbar>
         </ion-header>
@@ -291,18 +453,20 @@ onMounted(() => {
             text: 'Позвонить',
             icon: call,
             handler: () => callContact(selectedContact!),
-            disabled: !selectedContact?.phone
+            disabled: !selectedContact?.phone,
           },
           {
             text: 'Написать',
             icon: mail,
             handler: () => emailContact(selectedContact!),
-            disabled: !selectedContact?.email
+            disabled: !selectedContact?.email,
           },
           {
-            text: editingContact?.isFavorite ? 'Убрать из избранного' : 'Добавить в избранное',
-            icon: editingContact?.isFavorite ? starOutline : star,
-            handler: () => toggleFavorite(selectedContact!)
+            text: selectedContact?.isFavorite
+              ? 'Убрать из избранного'
+              : 'Добавить в избранное',
+            icon: selectedContact?.isFavorite ? starOutline : star,
+            handler: () => toggleFavorite(selectedContact!),
           },
           {
             text: 'Редактировать',
@@ -310,7 +474,7 @@ onMounted(() => {
             handler: () => {
               openEditModal(selectedContact!);
               isActionSheetOpen = false;
-            }
+            },
           },
           {
             text: 'Удалить',
@@ -319,12 +483,12 @@ onMounted(() => {
             handler: () => {
               confirmDelete(selectedContact!.id);
               isActionSheetOpen = false;
-            }
+            },
           },
           {
             text: 'Отмена',
-            role: 'cancel'
-          }
+            role: 'cancel',
+          },
         ]"
         @did-dismiss="isActionSheetOpen = false"
       ></ion-action-sheet>
@@ -337,13 +501,13 @@ onMounted(() => {
         :buttons="[
           {
             text: 'Отмена',
-            role: 'cancel'
+            role: 'cancel',
           },
           {
             text: 'Удалить',
             role: 'destructive',
-            handler: deleteContact
-          }
+            handler: deleteContact,
+          },
         ]"
         @did-dismiss="isDeleteAlertOpen = false"
       ></ion-alert>
@@ -409,5 +573,169 @@ onMounted(() => {
 
 .contacts-list {
   padding-bottom: 80px; /* Отступ для FAB */
+}
+
+/* Постоянно видимая ручка Bottom Sheet */
+.bottom-sheet-handle {
+  position: fixed;
+  bottom: 0px;
+  left: 0;
+  right: 0;
+  background: var(--ion-color-light);
+  border-top: 1px solid var(--ion-color-light-shade);
+  border-radius: 16px 16px 0 0;
+  padding: 8px 16px 12px;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  margin: 0 8px;
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bottom-sheet-handle:hover {
+  background: var(--ion-color-light-shade);
+  transform: translateY(-2px);
+}
+
+.bottom-sheet-handle.active {
+  background: var(--ion-color-primary-tint);
+  border-color: var(--ion-color-primary);
+}
+
+/* Состояния при открытом модальном окне */
+.bottom-sheet-handle.modal-open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Состояние при перетаскивании */
+.bottom-sheet-handle.dragging {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+  background: var(--ion-color-primary-tint);
+}
+
+.handle-bar {
+  width: 40px;
+  height: 4px;
+  background: var(--ion-color-medium);
+  border-radius: 2px;
+  margin: 0 auto 8px;
+}
+
+.handle-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--ion-color-dark);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.handle-content ion-icon {
+  color: var(--ion-color-primary);
+}
+
+/* Адаптация для мобильных устройств */
+@media (max-width: 768px) {
+  .bottom-sheet-handle {
+    bottom: 0px;
+    margin: 0 4px;
+  }
+}
+
+/* Bottom Sheet стили */
+.bottom-sheet-content {
+  padding: 16px;
+  min-height: 200px;
+  margin-top: 0;
+}
+
+.search-section h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ion-color-dark);
+}
+
+.search-results-info {
+  margin-top: -8px;
+  text-align: center;
+}
+
+.search-results-info ion-note {
+  font-size: 12px;
+  color: var(--ion-color-medium);
+}
+
+.filters-section {
+  margin: 16px 0;
+}
+
+.filters-section ion-item {
+  --padding-start: 0;
+  --padding-end: 0;
+  margin-bottom: 8px;
+}
+
+.search-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.search-actions ion-button {
+  flex: 1;
+}
+
+/* Ручка внутри модального окна */
+.bottom-sheet-handle-modal {
+  position: sticky;
+  top: 0;
+  background: var(--ion-color-light);
+  border-bottom: 1px solid var(--ion-color-light-shade);
+  border-radius: 0;
+  padding: 8px 16px 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin: 0;
+}
+
+.bottom-sheet-handle-modal:hover {
+  background: var(--ion-color-light-shade);
+}
+
+.bottom-sheet-handle-modal.active {
+  background: var(--ion-color-primary-tint);
+  border-color: var(--ion-color-primary);
+}
+
+.bottom-sheet-handle-modal .handle-bar {
+  width: 40px;
+  height: 4px;
+  background: var(--ion-color-medium);
+  border-radius: 2px;
+  margin: 0 auto 8px;
+}
+
+.bottom-sheet-handle-modal .handle-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--ion-color-dark);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.bottom-sheet-handle-modal .handle-content ion-icon {
+  color: var(--ion-color-primary);
 }
 </style>

@@ -36,6 +36,7 @@ const form = ref({
   email: '',
   notes: '',
   category: 'Другое',
+  birthday: '',
   isFavorite: false
 });
 
@@ -46,6 +47,45 @@ const categories = [
   { value: 'Коллеги', label: 'Коллеги' },
   { value: 'Другое', label: 'Другое' }
 ];
+
+// Функция для форматирования номера телефона
+function formatPhoneNumber(value: string): string {
+  // Удаляем все нецифровые символы
+  const numbers = value.replace(/\D/g, '');
+  
+  // Если номер начинается с 8, заменяем на +7
+  let formatted = numbers;
+  if (formatted.startsWith('8') && formatted.length > 1) {
+    formatted = '7' + formatted.slice(1);
+  }
+  
+  // Если номер начинается с 7, добавляем +
+  if (formatted.startsWith('7') && formatted.length > 1) {
+    formatted = '+' + formatted;
+  }
+  
+  // Форматируем в зависимости от длины
+  if (formatted.length <= 1) {
+    return formatted;
+  } else if (formatted.length <= 2) {
+    return formatted;
+  } else if (formatted.length <= 5) {
+    return formatted.slice(0, 2) + ' (' + formatted.slice(2);
+  } else if (formatted.length <= 8) {
+    return formatted.slice(0, 2) + ' (' + formatted.slice(2, 5) + ') ' + formatted.slice(5);
+  } else if (formatted.length <= 10) {
+    return formatted.slice(0, 2) + ' (' + formatted.slice(2, 5) + ') ' + formatted.slice(5, 8) + '-' + formatted.slice(8);
+  } else {
+    return formatted.slice(0, 2) + ' (' + formatted.slice(2, 5) + ') ' + formatted.slice(5, 8) + '-' + formatted.slice(8, 10) + '-' + formatted.slice(10, 12);
+  }
+}
+
+// Обработчик ввода номера телефона
+function onPhoneInput(event: any) {
+  const value = event.target.value;
+  const formatted = formatPhoneNumber(value);
+  form.value.phone = formatted;
+}
 
 // Валидация формы
 const isFormValid = computed(() => {
@@ -60,6 +100,7 @@ function resetForm() {
     email: '',
     notes: '',
     category: 'Другое',
+    birthday: '',
     isFavorite: false
   };
 }
@@ -68,10 +109,11 @@ function resetForm() {
 function populateForm(contact: Contact) {
   form.value = {
     name: contact.name,
-    phone: contact.phone || '',
+    phone: contact.phone ? formatPhoneNumber(contact.phone) : '',
     email: contact.email || '',
     notes: contact.notes || '',
     category: contact.category || 'Другое',
+    birthday: contact.birthday || '',
     isFavorite: contact.isFavorite
   };
 }
@@ -80,12 +122,16 @@ function populateForm(contact: Contact) {
 function saveContact() {
   if (!isFormValid.value) return;
 
+  // Очищаем номер телефона от форматирования для сохранения
+  const cleanPhone = form.value.phone.replace(/\D/g, '');
+
   const contactData = {
     name: form.value.name.trim(),
-    phone: form.value.phone.trim() || undefined,
+    phone: cleanPhone || undefined,
     email: form.value.email.trim() || undefined,
     notes: form.value.notes.trim() || undefined,
     category: form.value.category,
+    birthday: form.value.birthday || undefined,
     isFavorite: form.value.isFavorite
   };
 
@@ -138,6 +184,7 @@ watch(() => props.isOpen, (isOpen) => {
         v-model="form.phone"
         placeholder="+7 (999) 123-45-67"
         type="tel"
+        @ion-input="onPhoneInput"
       ></ion-input>
     </ion-item>
 
@@ -147,6 +194,15 @@ watch(() => props.isOpen, (isOpen) => {
         v-model="form.email"
         placeholder="example@email.com"
         type="email"
+      ></ion-input>
+    </ion-item>
+
+    <ion-item>
+      <ion-label position="stacked">Дата рождения</ion-label>
+      <ion-input
+        v-model="form.birthday"
+        placeholder="YYYY-MM-DD"
+        type="date"
       ></ion-input>
     </ion-item>
 

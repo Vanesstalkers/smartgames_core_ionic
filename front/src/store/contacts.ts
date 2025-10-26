@@ -8,6 +8,7 @@ export interface Contact {
   notes?: string;
   category?: string; // Семья, Друзья, Коллеги, Другое
   avatar?: string; // URL аватара или инициалы
+  birthday?: string; // ISO дата рождения
   isFavorite: boolean;
   createdAt: string; // ISO дата создания
   updatedAt: string; // ISO дата обновления

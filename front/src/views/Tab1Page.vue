@@ -98,8 +98,7 @@
       @touchstart="handleTouchStart"
       @touchmove="handleTouchMove"
       @touchend="handleTouchEnd"
-      :class="{ 
-        'active': hasActiveFilters,
+      :class="{
         'modal-open': isSearchBottomSheetOpen,
         'dragging': isDragging
       }"
@@ -123,7 +122,6 @@
         <!-- Ручка внутри модального окна -->
         <div 
           class="bottom-sheet-handle-modal" 
-          :class="{ 'active': hasActiveFilters }"
         >
           <div class="handle-bar"></div>
           <div class="handle-content">
@@ -140,6 +138,11 @@
               placeholder="Поиск событий"
               @ion-input="onSearchInput"
             />
+            <div class="search-results-info">
+              <ion-note>
+                Отфильтровано: {{ upcomingEvents.length }} из {{ totalEvents }} событий
+              </ion-note>
+            </div>
           </div>
           
           <div class="filters-section">
@@ -193,7 +196,8 @@ import {
   IonItem,
   IonLabel,
   IonCheckbox,
-  IonBadge
+  IonBadge,
+  IonNote
 } from '@ionic/vue';
 import { 
   add, 
@@ -516,6 +520,16 @@ onMounted(() => {
   font-size: 18px;
   font-weight: 600;
   color: var(--ion-color-dark);
+}
+
+.search-results-info {
+  margin-top: -8px;
+  text-align: center;
+}
+
+.search-results-info ion-note {
+  font-size: 12px;
+  color: var(--ion-color-medium);
 }
 
 .filters-section {

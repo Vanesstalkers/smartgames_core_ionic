@@ -83,6 +83,11 @@
                 placeholder="Поиск событий"
                 @ion-input="onSearchInput"
               />
+              <div class="search-results-info">
+                <ion-note>
+                  Отфильтровано: {{ filteredEvents.length }} из {{ events.length }} событий
+                </ion-note>
+              </div>
             </div>
             
             <div class="filters-section">
@@ -138,7 +143,8 @@ import {
   IonSelect,
   IonSelectOption,
   IonCheckbox,
-  IonBadge
+  IonBadge,
+  IonNote
 } from '@ionic/vue';
 import { 
   add, 
@@ -386,6 +392,16 @@ onMounted(() => {
   font-size: 18px;
   font-weight: 600;
   color: var(--ion-color-dark);
+}
+
+.search-results-info {
+  margin-top: -8px;
+  text-align: center;
+}
+
+.search-results-info ion-note {
+  font-size: 12px;
+  color: var(--ion-color-medium);
 }
 
 .filters-section {
