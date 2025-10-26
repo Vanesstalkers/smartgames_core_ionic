@@ -23,7 +23,6 @@
 
       <!-- PWA компоненты -->
       <PWAInstallPrompt />
-      <PWAStatus />
       <PWAInstallInstructions />
 
       <!-- Убрали компактные фильтры - теперь они в Bottom Sheet -->
@@ -213,7 +212,6 @@ import { IonSearchbar, IonSelect, IonSelectOption } from '@ionic/vue';
 import EventCardCompact from '@/components/EventCardCompact.vue';
 import BalanceCard from '@/components/BalanceCard.vue';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt.vue';
-import PWAStatus from '@/components/PWAStatus.vue';
 import PWAInstallInstructions from '@/components/PWAInstallInstructions.vue';
 const AddEventModal = defineAsyncComponent(() => import('../components/AddEventModal.vue'));
 import eventsStore from '@/store/events';

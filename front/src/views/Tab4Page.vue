@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onActivated, onDeactivated, watch } from "vue";
+import { useRoute } from "vue-router";
 import {
   IonPage,
   IonHeader,
@@ -37,7 +38,7 @@ import {
   refresh,
   checkmark,
   close,
-  peopleOutline
+  peopleOutline,
 } from "ionicons/icons";
 import contactsStore from "@/store/contacts";
 import eventsStore from "@/store/events";
@@ -46,10 +47,20 @@ import type { MemorialEvent } from "@/store/events";
 import ContactCard from "@/components/ContactCard.vue";
 import ContactForm from "@/components/ContactForm.vue";
 import AddEventModal from "@/components/AddEventModal.vue";
-import { Contacts } from '@capacitor-community/contacts';
+import { Contacts } from "@capacitor-community/contacts";
+
+// Типизация для Capacitor
+declare global {
+  interface Window {
+    Capacitor?: any;
+  }
+}
 
 // Используем контакты из store
 const contacts = contactsStore.contacts;
+
+// Получаем текущий роут для отслеживания переходов
+const route = useRoute();
 
 // Инициализируем тестовые данные, если store пустой
 contactsStore.ensureSampleData();
@@ -115,15 +126,15 @@ const filteredContacts = computed(() => {
   return result.sort((a, b) => {
     const aIsNew = newContactIds.value.has(a.id);
     const bIsNew = newContactIds.value.has(b.id);
-    
+
     // Новые контакты всегда сверху
     if (aIsNew && !bIsNew) return -1;
     if (!aIsNew && bIsNew) return 1;
-    
+
     // Если оба новые или оба не новые, сортируем по избранности
     if (a.isFavorite && !b.isFavorite) return -1;
     if (!a.isFavorite && b.isFavorite) return 1;
-    
+
     // Затем по имени
     return a.name.localeCompare(b.name);
   });
@@ -187,11 +198,6 @@ function saveContact(
     if (newContact) {
       // Добавляем ID нового контакта в список для подсветки
       newContactIds.value.add(newContact.id);
-      
-      // Убираем подсветку через 3 секунды
-      setTimeout(() => {
-        newContactIds.value.delete(newContact.id);
-      }, 3000);
     }
   }
 
@@ -299,105 +305,134 @@ function viewEvent(event: any) {
 // Проверка поддержки импорта контактов
 async function checkContactPickerSupport() {
   try {
-    if (Contacts) {
-      const permissions = await Contacts.checkPermissions();
-      if (permissions.contacts === 'granted') {
-        isContactPickerSupported.value = true;
-        return;
+    // Проверяем Capacitor Contacts (для мобильных приложений)
+    if (Contacts?.checkPermissions) {
+      try {
+        const permissions = await Contacts.checkPermissions();
+        if (permissions.contacts === "granted") {
+          isContactPickerSupported.value = true;
+          return;
+        }
+      } catch (err) {
+        // Capacitor Contacts не поддерживается
       }
     }
-    
-    if ('contacts' in navigator && 'ContactsManager' in window) {
-      isContactPickerSupported.value = true;
+
+    // Проверяем поддержку Contact Picker API (для PWA)
+    if ("contacts" in navigator && "ContactsManager" in window) {
+      const contactsManager = (navigator as any).contacts;
+      if (contactsManager && typeof contactsManager.select === 'function') {
+        isContactPickerSupported.value = true;
+      }
+    } else {
+      // Проверяем альтернативные способы
+      if (navigator.share && typeof navigator.share === "function") {
+        // Web Share API поддерживается
+      }
     }
   } catch (error) {
-    console.error('Ошибка при проверке поддержки контактов:', error);
+    // Ошибка при проверке поддержки контактов
   }
 }
 
 // Импорт контактов
 async function importContacts() {
   try {
-    if (Contacts) {
-      // Запрашиваем разрешения
-      const permissions = await Contacts.requestPermissions();
-      if (permissions.contacts !== 'granted') {
-        alert('Необходимо разрешение на доступ к контактам');
+    // Метод 1: Capacitor Contacts (только для нативных приложений)
+    if (Contacts && window.Capacitor) {
+      try {
+        const permissions = await Contacts.requestPermissions();
+        
+        if (permissions.contacts === 'granted') {
+          const result = await Contacts.getContacts({
+            projection: {
+              name: true,
+              phones: true,
+              emails: true,
+            },
+          });
+
+          if (result.contacts && result.contacts.length > 0) {
+            const processedContacts = result.contacts.map((contact: any) => ({
+              name: contact.name?.display || contact.name?.given || "Без имени",
+              phone: contact.phones?.[0]?.number || "",
+              email: contact.emails?.[0]?.address || "",
+              category: "Импортированные",
+              isFavorite: false,
+            }));
+
+            // Добавляем контакты в store
+            processedContacts.forEach((contactData) => {
+              const newContact = contactsStore.addContact(contactData);
+              if (newContact) {
+                // Добавляем ID нового контакта в список для подсветки
+                newContactIds.value.add(newContact.id);
+              }
+            });
+
+            alert(`Импортировано ${processedContacts.length} контактов`);
+            return;
+          } else {
+            alert("Контакты не найдены");
+            return;
+          }
+        } else {
+          alert('Необходимо разрешение на доступ к контактам. Проверьте настройки приложения.');
+          return;
+        }
+      } catch (capacitorError) {
+        // Capacitor Contacts недоступен
+      }
+    }
+
+    // Метод 2: Contact Picker API
+    if ("contacts" in navigator && "ContactsManager" in window && isContactPickerSupported.value) {
+      try {
+        const contactsManager = (navigator as any).contacts;
+        
+        if (!contactsManager || typeof contactsManager.select !== 'function') {
+          throw new Error('Contact Picker API не функционален');
+        }
+        
+        const contacts = await contactsManager.select(["name", "tel", "email"], { multiple: true });
+
+        if (contacts && contacts.length > 0) {
+          const processedContacts = contacts.map((contact: any) => ({
+            name: contact.name?.[0] || "Без имени",
+            phone: contact.tel?.[0] || "",
+            email: contact.email?.[0] || "",
+            category: "Импортированные",
+            isFavorite: false,
+          }));
+
+          processedContacts.forEach(
+            (contactData: Omit<Contact, "id" | "createdAt" | "updatedAt">) => {
+              const newContact = contactsStore.addContact(contactData);
+              if (newContact) {
+                // Добавляем ID нового контакта в список для подсветки
+                newContactIds.value.add(newContact.id);
+              }
+            },
+          );
+
+          alert(`Импортировано ${processedContacts.length} контактов`);
+          return;
+        }
+      } catch (pickerError: any) {
+        if (pickerError.message && pickerError.message.includes('Not implemented on web')) {
+          // Contact Picker API не реализован в веб-версии браузера
+        }
+        alert('Contact Picker API недоступен в вашем браузере. Используйте ручное добавление контактов.');
         return;
       }
-
-      // Получаем контакты
-      const result = await Contacts.getContacts({
-        projection: {
-          name: true,
-          phones: true,
-          emails: true
-        }
-      });
-
-      if (result.contacts && result.contacts.length > 0) {
-        // Обрабатываем полученные контакты
-        const processedContacts = result.contacts.map((contact: any) => ({
-          name: contact.name?.display || contact.name?.given || 'Без имени',
-          phone: contact.phones?.[0]?.number || '',
-          email: contact.emails?.[0]?.address || '',
-          category: 'Импортированные',
-          isFavorite: false
-        }));
-
-        // Добавляем контакты в store
-        processedContacts.forEach(contactData => {
-          const newContact = contactsStore.addContact(contactData);
-          if (newContact) {
-            // Добавляем ID нового контакта в список для подсветки
-            newContactIds.value.add(newContact.id);
-            
-            // Убираем подсветку через 3 секунды
-            setTimeout(() => {
-              newContactIds.value.delete(newContact.id);
-            }, 3000);
-          }
-        });
-
-        alert(`Импортировано ${processedContacts.length} контактов`);
-      } else {
-        alert('Контакты не найдены');
-      }
-    } else if ('contacts' in navigator && 'ContactsManager' in window) {
-      // Используем Contact Picker API
-      const contactsManager = (navigator as any).contacts;
-      const contacts = await contactsManager.select(['name', 'tel', 'email']);
-      
-      if (contacts && contacts.length > 0) {
-        const processedContacts = contacts.map((contact: any) => ({
-          name: contact.name?.[0] || 'Без имени',
-          phone: contact.tel?.[0] || '',
-          email: contact.email?.[0] || '',
-          category: 'Импортированные',
-          isFavorite: false
-        }));
-
-        processedContacts.forEach((contactData: Omit<Contact, "id" | "createdAt" | "updatedAt">) => {
-          const newContact = contactsStore.addContact(contactData);
-          if (newContact) {
-            // Добавляем ID нового контакта в список для подсветки
-            newContactIds.value.add(newContact.id);
-            
-            // Убираем подсветку через 3 секунды
-            setTimeout(() => {
-              newContactIds.value.delete(newContact.id);
-            }, 3000);
-          }
-        });
-
-        alert(`Импортировано ${processedContacts.length} контактов`);
-      }
-    } else {
-      alert('Импорт контактов не поддерживается в вашем браузере');
     }
+
+    // Если ничего не сработало
+    alert('Импорт контактов недоступен в вашем браузере. Используйте ручное добавление контактов.');
+    
   } catch (error) {
-    console.error('Ошибка при импорте контактов:', error);
-    alert('Ошибка при импорте контактов');
+    console.error("Ошибка при импорте контактов:", error);
+    alert("Ошибка при импорте контактов");
   }
 }
 
@@ -407,7 +442,7 @@ function closeEditEventModal() {
   editingEvent.value = null;
 }
 
-function saveEvent(eventData: Omit<MemorialEvent, 'id'>) {
+function saveEvent(eventData: Omit<MemorialEvent, "id">) {
   if (editingEvent.value) {
     // Редактирование существующего события
     const updated: MemorialEvent = {
@@ -422,10 +457,34 @@ function saveEvent(eventData: Omit<MemorialEvent, 'id'>) {
   closeEditEventModal();
 }
 
+// Функция для очистки меток "новый" при открытии раздела
+function clearNewContactFlags() {
+  newContactIds.value.clear();
+}
+
 onMounted(() => {
-  console.log("Контакты загружены:", contacts.value.length);
   checkContactPickerSupport();
+  // Очищаем метки "новый" при открытии раздела
+  clearNewContactFlags();
 });
+
+// Очищаем метки "новый" при активации вкладки (возвращении на неё)
+onActivated(() => {
+  clearNewContactFlags();
+});
+
+// Очищаем метки "новый" при деактивации вкладки (переходе на другую вкладку)
+onDeactivated(() => {
+  clearNewContactFlags();
+});
+
+// Отслеживаем изменения роута для сброса меток при переходе на другие вкладки
+watch(() => route.path, (newPath, oldPath) => {
+  // Если покидаем вкладку контактов (любой путь содержащий tab4)
+  if (oldPath && oldPath.includes('tab4') && !newPath.includes('tab4')) {
+    clearNewContactFlags();
+  }
+}, { immediate: false });
 </script>
 
 <template>
@@ -437,7 +496,6 @@ onMounted(() => {
     </ion-header>
 
     <ion-content class="ion-padding">
-      <!-- Статистика -->
       <div class="stats-container">
         <ion-card>
           <ion-card-content>
@@ -517,15 +575,12 @@ onMounted(() => {
         <ion-fab-button>
           <ion-icon :icon="add"></ion-icon>
         </ion-fab-button>
-        
+
         <ion-fab-list side="top">
-          <ion-fab-button 
-            @click="openAddModal"
-            title="Добавить контакт"
-          >
+          <ion-fab-button @click="openAddModal" title="Добавить контакт">
             <ion-icon :icon="person"></ion-icon>
           </ion-fab-button>
-          <ion-fab-button 
+          <ion-fab-button
             @click="importContacts"
             :disabled="!isContactPickerSupported"
             :class="{ 'fab-disabled': !isContactPickerSupported }"
