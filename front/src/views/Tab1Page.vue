@@ -91,25 +91,50 @@
       @save="saveEvent"
     />
 
-    <!-- FAB для поиска -->
-    <ion-fab vertical="bottom" horizontal="end" slot="fixed">
-      <ion-fab-button class="search-fab" @click="openSearchBottomSheet">
-        <ion-icon :icon="search"></ion-icon>
-      </ion-fab-button>
-    </ion-fab>
+    <!-- Постоянно видимая ручка Bottom Sheet -->
+    <div 
+      class="bottom-sheet-handle" 
+      @click="openSearchBottomSheet"
+      @touchstart="handleTouchStart"
+      @touchmove="handleTouchMove"
+      @touchend="handleTouchEnd"
+      :class="{ 
+        'active': hasActiveFilters,
+        'modal-open': isSearchBottomSheetOpen,
+        'dragging': isDragging
+      }"
+    >
+      <div class="handle-bar"></div>
+      <div class="handle-content">
+        <ion-icon :icon="search" size="small"></ion-icon>
+        <span>Поиск и фильтры</span>
+        <ion-badge v-if="hasActiveFilters" color="primary">{{ getActiveFiltersCount }}</ion-badge>
+      </div>  
+    </div>
 
     <!-- Bottom Sheet с поиском и фильтрами -->
     <ion-modal 
       :is-open="isSearchBottomSheetOpen" 
-      :initial-breakpoint="0.3" 
-      :breakpoints="[0, 0.3, 0.7, 1]"
+      :initial-breakpoint="0.4" 
+      :breakpoints="[0, 0.4, 0.8, 1]"
       @did-dismiss="closeSearchBottomSheet"
     >
       <ion-content>
+        <!-- Ручка внутри модального окна -->
+        <div 
+          class="bottom-sheet-handle-modal" 
+          :class="{ 'active': hasActiveFilters }"
+        >
+          <div class="handle-bar"></div>
+          <div class="handle-content">
+            <ion-icon :icon="search" size="small"></ion-icon>
+            <span>Поиск и фильтры</span>
+            <ion-badge v-if="hasActiveFilters" color="primary">{{ getActiveFiltersCount }}</ion-badge>
+          </div>
+        </div>
+        
         <div class="bottom-sheet-content">
-          <div class="handle"></div>
           <div class="search-section">
-            <h3>Поиск и фильтры</h3>
             <ion-searchbar 
               v-model="searchQuery" 
               placeholder="Поиск событий"
@@ -164,12 +189,11 @@ import {
   IonButtons,
   IonButton,
   IonIcon,
-  IonFab,
-  IonFabButton,
   IonModal,
   IonItem,
   IonLabel,
-  IonCheckbox
+  IonCheckbox,
+  IonBadge
 } from '@ionic/vue';
 import { 
   add, 
@@ -207,6 +231,11 @@ const isAddEventModalOpen = ref(false);
 const editingEvent = ref<MemorialEvent | null>(null);
 const events = eventsStore.events;
 const isSearchBottomSheetOpen = ref(false);
+
+// Состояние для жестов
+const touchStartY = ref(0);
+const touchStartTime = ref(0);
+const isDragging = ref(false);
 
 // Filters
 const searchQuery = ref('');
@@ -260,6 +289,15 @@ const hasActiveFilters = computed(() => {
   return searchQuery.value.trim() !== '' || 
          selectedCategory.value !== '' || 
          showImportantOnly.value;
+});
+
+// Подсчитываем количество активных фильтров
+const getActiveFiltersCount = computed(() => {
+  let count = 0;
+  if (searchQuery.value.trim() !== '') count++;
+  if (selectedCategory.value !== '') count++;
+  if (showImportantOnly.value) count++;
+  return count;
 });
 
 // Методы
@@ -325,6 +363,33 @@ const clearFilters = () => {
 const applyFilters = () => {
   // Фильтры уже применяются автоматически через computed свойства
   closeSearchBottomSheet();
+};
+
+// Обработчики жестов для ручки Bottom Sheet
+const handleTouchStart = (event: TouchEvent) => {
+  if (isSearchBottomSheetOpen.value) return;
+  
+  touchStartY.value = event.touches[0].clientY;
+  touchStartTime.value = Date.now();
+  isDragging.value = false;
+};
+
+const handleTouchMove = (event: TouchEvent) => {
+  if (isSearchBottomSheetOpen.value) return;
+  
+  const currentY = event.touches[0].clientY;
+  const deltaY = touchStartY.value - currentY;
+  const deltaTime = Date.now() - touchStartTime.value;
+  
+  // Если свайп вверх больше 30px и быстрее 300ms
+  if (deltaY > 30 && deltaTime < 300) {
+    isDragging.value = true;
+    openSearchBottomSheet();
+  }
+};
+
+const handleTouchEnd = () => {
+  isDragging.value = false;
 };
 
 // Загрузка данных при монтировании
@@ -435,6 +500,7 @@ onMounted(() => {
 .bottom-sheet-content {
   padding: 16px;
   min-height: 200px;
+  margin-top: 0; /* Убираем отступ, так как ручка теперь sticky */
 }
 
 .handle {
@@ -488,6 +554,12 @@ ion-fab-button {
   --border-width: 2px;
   --border-style: solid;
   --border-color: var(--ion-color-primary);
+  margin-bottom: 8px; /* Отступ от ручки Bottom Sheet */
+}
+
+/* FAB контейнер с отступом от ручки */
+ion-fab {
+  bottom: 80px; /* Поднимаем FAB выше ручки Bottom Sheet */
 }
 
 /* Стили для заголовка карточки с фильтрами */
@@ -503,5 +575,154 @@ ion-fab-button {
   --padding-end: 8px;
   font-size: 12px;
   height: 32px;
+}
+
+/* Постоянно видимая ручка Bottom Sheet */
+.bottom-sheet-handle {
+  position: fixed;
+  bottom: 0px;
+  left: 0;
+  right: 0;
+  background: var(--ion-color-light);
+  border-top: 1px solid var(--ion-color-light-shade);
+  border-radius: 16px 16px 0 0;
+  padding: 8px 16px 12px;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  margin: 0 8px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.bottom-sheet-handle:hover {
+  background: var(--ion-color-light-shade);
+  transform: translateY(-2px);
+}
+
+.bottom-sheet-handle.active {
+  background: var(--ion-color-primary-tint);
+  border-color: var(--ion-color-primary);
+}
+
+/* Состояния при открытом модальном окне */
+.bottom-sheet-handle.modal-open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Плавное появление ручки */
+.bottom-sheet-handle {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Состояние при перетаскивании */
+.bottom-sheet-handle.dragging {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+  background: var(--ion-color-primary-tint);
+}
+
+.handle-bar {
+  width: 40px;
+  height: 4px;
+  background: var(--ion-color-medium);
+  border-radius: 2px;
+  margin: 0 auto 8px;
+}
+
+.handle-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--ion-color-dark);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.handle-content ion-icon {
+  color: var(--ion-color-primary);
+}
+
+/* Адаптация для мобильных устройств */
+@media (max-width: 768px) {
+  .bottom-sheet-handle {
+    bottom: 0px;
+    margin: 0 4px;
+  }
+}
+
+/* Ручка внутри модального окна */
+.bottom-sheet-handle-modal {
+  position: sticky;
+  top: 0;
+  background: var(--ion-color-light);
+  border-bottom: 1px solid var(--ion-color-light-shade);
+  border-radius: 0;
+  padding: 8px 16px 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin: 0;
+}
+
+.bottom-sheet-handle-modal:hover {
+  background: var(--ion-color-light-shade);
+}
+
+.bottom-sheet-handle-modal.active {
+  background: var(--ion-color-primary-tint);
+  border-color: var(--ion-color-primary);
+}
+
+.bottom-sheet-handle-modal .handle-bar {
+  width: 40px;
+  height: 4px;
+  background: var(--ion-color-medium);
+  border-radius: 2px;
+  margin: 0 auto 8px;
+}
+
+.bottom-sheet-handle-modal .handle-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--ion-color-dark);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.bottom-sheet-handle-modal .handle-content ion-icon {
+  color: var(--ion-color-primary);
+}
+
+/* Подсказка о свайпе */
+.swipe-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--ion-color-medium);
+  opacity: 0.7;
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-3px);
+  }
+  60% {
+    transform: translateY(-2px);
+  }
 }
 </style>

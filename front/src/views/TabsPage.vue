@@ -18,6 +18,11 @@
           <ion-label>События</ion-label>
         </ion-tab-button>
 
+        <ion-tab-button tab="contacts" href="/tabs/contacts">
+          <ion-icon aria-hidden="true" :icon="people" />
+          <ion-label>Контакты</ion-label>
+        </ion-tab-button>
+
         <ion-tab-button tab="settings" href="/tabs/settings">
           <ion-icon aria-hidden="true" :icon="settings" />
           <ion-label>Настройки</ion-label>
@@ -29,5 +34,5 @@
 
 <script setup lang="ts">
 import { IonTabBar, IonTabButton, IonTabs, IonLabel, IonIcon, IonPage, IonRouterOutlet } from '@ionic/vue';
-import { home, calendar, list, settings } from 'ionicons/icons';
+import { home, calendar, list, people, settings } from 'ionicons/icons';
 </script>

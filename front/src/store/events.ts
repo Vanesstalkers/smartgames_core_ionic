@@ -1,5 +1,6 @@
 import { ref, watch } from 'vue';
 import { createSampleEvents } from '@/data/sampleEvents';
+import contactsStore from './contacts';
 
 export interface MemorialEvent {
   id: string;
@@ -16,6 +17,7 @@ export interface MemorialEvent {
 }
 
 export interface Contact {
+  id?: string;
   name?: string;
   tel?: string;
   email?: string;
@@ -89,6 +91,61 @@ function deleteEvent(id: string) {
   return false;
 }
 
+// Получить контакты для события
+function getEventContacts(eventId: string) {
+  const event = events.value.find(e => e.id === eventId);
+  if (!event || !event.contacts) return [];
+  
+  return event.contacts.map(contact => {
+    // Если контакт имеет только базовую информацию, попробуем найти полный контакт в store
+    if (contact.name && !contact.id) {
+      const fullContact = contactsStore.contacts.value.find(c => 
+        c.name === contact.name && 
+        (c.phone === contact.tel || c.email === contact.email)
+      );
+      return fullContact || contact;
+    }
+    return contact;
+  });
+}
+
+// Добавить контакт к событию
+function addContactToEvent(eventId: string, contact: Contact) {
+  const event = events.value.find(e => e.id === eventId);
+  if (event) {
+    if (!event.contacts) {
+      event.contacts = [];
+    }
+    
+    // Проверяем, не добавлен ли уже этот контакт
+    const existingContact = event.contacts.find(c => 
+      c.name === contact.name && 
+      (c.tel === contact.tel || c.email === contact.email)
+    );
+    
+    if (!existingContact) {
+      event.contacts.push({
+        name: contact.name,
+        tel: contact.tel,
+        email: contact.email
+      });
+      save();
+    }
+  }
+}
+
+// Удалить контакт из события
+function removeContactFromEvent(eventId: string, contactName: string) {
+  const event = events.value.find(e => e.id === eventId);
+  if (event && event.contacts) {
+    const index = event.contacts.findIndex(c => c.name === contactName);
+    if (index > -1) {
+      event.contacts.splice(index, 1);
+      save();
+    }
+  }
+}
+
 // Следим за изменениями и сохраняем
 watch(events, () => save(), { deep: true });
 
@@ -102,5 +159,8 @@ export default {
   addEvent,
   updateEvent,
   deleteEvent,
-  ensureSampleData
+  ensureSampleData,
+  getEventContacts,
+  addContactToEvent,
+  removeContactFromEvent
 };
