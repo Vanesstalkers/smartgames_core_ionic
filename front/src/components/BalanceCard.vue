@@ -5,7 +5,6 @@
         <ion-card-title>Баланс</ion-card-title>
         <ion-button 
           size="small" 
-          fill="outline" 
           @click="openTopUpModal"
           class="top-up-button"
         >

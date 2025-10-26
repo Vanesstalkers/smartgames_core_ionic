@@ -359,9 +359,10 @@ const openYearPicker = async () => {
           </div>
 
           <!-- FAB для добавления события -->
-          <ion-fab vertical="bottom" horizontal="end" slot="fixed">
-            <ion-fab-button @click="openAddEventModal">
-              <ion-icon :icon="add"></ion-icon>
+          <ion-fab vertical="bottom" horizontal="center" slot="fixed">
+            <ion-fab-button class="add-event-fab" @click="openAddEventModal">
+              <ion-icon :icon="add" slot="start"></ion-icon>
+              Добавить событие
             </ion-fab-button>
           </ion-fab>
         </ion-content>
@@ -600,4 +601,21 @@ const openYearPicker = async () => {
 }
 
 /* Убираем стили для модального окна - используем picker controller */
+
+/* Стили для FAB добавления события */
+.add-event-fab {
+  --background: var(--ion-color-primary);
+  --background-activated: var(--ion-color-primary-shade);
+  --background-hover: var(--ion-color-primary-tint);
+  --color: white;
+  --border-radius: 24px;
+  --padding-start: 20px;
+  --padding-end: 20px;
+  height: 48px;
+  font-weight: 500;
+  font-size: 14px;
+  width: 170px;
+  min-width: auto;
+  max-width: none;
+}
 </style>

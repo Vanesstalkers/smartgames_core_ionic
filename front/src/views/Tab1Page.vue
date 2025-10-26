@@ -32,7 +32,19 @@
       <div class="compact-stats">
         <ion-card>
           <ion-card-header>
-            <ion-card-title>События</ion-card-title>
+            <div class="card-header-content">
+              <ion-card-title>События</ion-card-title>
+              <ion-button 
+                v-if="hasActiveFilters" 
+                fill="clear" 
+                size="small" 
+                @click="clearFilters"
+                class="clear-filters-btn"
+              >
+                <ion-icon :icon="refresh" slot="start"></ion-icon>
+                Сбросить фильтры
+              </ion-button>
+            </div>
           </ion-card-header>
           <ion-card-content>
             <div class="stats-row">
@@ -55,7 +67,7 @@
             <div v-if="upcomingEvents.length === 0" class="empty-state">
               <ion-icon :icon="calendarOutline" size="large"></ion-icon>
               <p>Нет предстоящих событий</p>
-              <ion-button fill="outline" @click="openAddEventModal">
+              <ion-button @click="openAddEventModal">
                 Добавить событие
               </ion-button>
             </div>
@@ -81,7 +93,7 @@
 
     <!-- FAB для поиска -->
     <ion-fab vertical="bottom" horizontal="end" slot="fixed">
-      <ion-fab-button @click="openSearchBottomSheet">
+      <ion-fab-button class="search-fab" @click="openSearchBottomSheet">
         <ion-icon :icon="search"></ion-icon>
       </ion-fab-button>
     </ion-fab>
@@ -242,6 +254,13 @@ const totalEvents = computed(() => events.value.length);
 const importantEvents = computed(() => 
   events.value.filter(event => event.isImportant).length
 );
+
+// Проверяем, есть ли активные фильтры
+const hasActiveFilters = computed(() => {
+  return searchQuery.value.trim() !== '' || 
+         selectedCategory.value !== '' || 
+         showImportantOnly.value;
+});
 
 // Методы
 const openAddEventModal = () => {
@@ -458,5 +477,31 @@ ion-fab-button {
   --background: var(--ion-color-primary);
   --background-activated: var(--ion-color-primary-shade);
   --background-hover: var(--ion-color-primary-tint);
+}
+
+/* Outline стиль для FAB поиска */
+.search-fab {
+  --background: transparent;
+  --background-activated: var(--ion-color-primary-tint);
+  --background-hover: var(--ion-color-primary-tint);
+  --color: var(--ion-color-primary);
+  --border-width: 2px;
+  --border-style: solid;
+  --border-color: var(--ion-color-primary);
+}
+
+/* Стили для заголовка карточки с фильтрами */
+.card-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.clear-filters-btn {
+  --padding-start: 8px;
+  --padding-end: 8px;
+  font-size: 12px;
+  height: 32px;
 }
 </style>
