@@ -107,7 +107,7 @@
       <div class="handle-bar"></div>
       <div class="handle-content">
         <ion-icon :icon="search" size="small"></ion-icon>
-        <span>Поиск и фильтры</span>
+        <span>Фильтры событий</span>
         <ion-badge v-if="hasActiveFilters" color="primary">{{ getActiveFiltersCount }}</ion-badge>
       </div>  
     </div>
@@ -128,7 +128,7 @@
           <div class="handle-bar"></div>
           <div class="handle-content">
             <ion-icon :icon="search" size="small"></ion-icon>
-            <span>Поиск и фильтры</span>
+            <span>Фильтры событий</span>
             <ion-badge v-if="hasActiveFilters" color="primary">{{ getActiveFiltersCount }}</ion-badge>
           </div>
         </div>

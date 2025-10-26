@@ -412,7 +412,7 @@ const openYearPicker = async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
+  padding: 0px 16px;
   background: var(--ion-color-light);
   border-top: 1px solid var(--ion-color-step-200);
   z-index: 1000;
