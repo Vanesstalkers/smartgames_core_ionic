@@ -48,6 +48,7 @@ import ContactCard from "@/components/ContactCard.vue";
 import ContactForm from "@/components/ContactForm.vue";
 import AddEventModal from "@/components/AddEventModal.vue";
 import { Contacts } from "@capacitor-community/contacts";
+import { App } from '@capacitor/app';
 
 // Типизация для Capacitor
 declare global {
@@ -90,6 +91,11 @@ const newContactIds = ref<Set<string>>(new Set());
 const touchStartY = ref(0);
 const touchStartTime = ref(0);
 const isDragging = ref(false);
+
+// Состояние для жестов модального окна
+const modalTouchStartY = ref(0);
+const modalTouchStartTime = ref(0);
+const isModalDragging = ref(false);
 
 // Состояние для FAB
 const isContactPickerSupported = ref(false);
@@ -169,17 +175,38 @@ const stats = computed(() => {
 function openAddModal() {
   editingContact.value = null;
   isAddModalOpen.value = true;
+  
+  // Добавляем запись в историю браузера для поддержки жеста "назад"
+  if (window.history && window.history.pushState) {
+    window.history.pushState({ modal: 'add' }, '', window.location.href);
+  }
 }
 
 function openEditModal(contact: Contact) {
   editingContact.value = contact;
   isEditModalOpen.value = true;
+  
+  // Добавляем запись в историю браузера для поддержки жеста "назад"
+  if (window.history && window.history.pushState) {
+    window.history.pushState({ modal: 'edit' }, '', window.location.href);
+  }
 }
 
 function closeModals() {
+  const wasModalOpen = isAddModalOpen.value || isEditModalOpen.value;
+  
   isAddModalOpen.value = false;
   isEditModalOpen.value = false;
   editingContact.value = null;
+  
+  // Удаляем запись из истории браузера только если модальное окно было открыто
+  // и если в истории есть запись модального окна
+  if (wasModalOpen && window.history && window.history.state) {
+    const currentState = window.history.state;
+    if (currentState && (currentState.modal === 'add' || currentState.modal === 'edit')) {
+      window.history.back();
+    }
+  }
 }
 
 function saveContact(
@@ -294,6 +321,56 @@ function handleTouchMove(event: TouchEvent) {
 
 function handleTouchEnd() {
   isDragging.value = false;
+}
+
+// Обработчики жестов для модального окна
+function handleModalTouchStart(event: TouchEvent) {
+  modalTouchStartY.value = event.touches[0].clientY;
+  modalTouchStartTime.value = Date.now();
+  isModalDragging.value = false;
+}
+
+function handleModalTouchMove(event: TouchEvent) {
+  const currentY = event.touches[0].clientY;
+  const deltaY = currentY - modalTouchStartY.value;
+  const deltaTime = Date.now() - modalTouchStartTime.value;
+
+  // Если свайп вниз больше 30px и быстрее 300ms
+  if (deltaY > 30 && deltaTime < 300) {
+    isModalDragging.value = true;
+    closeModals();
+  }
+}
+
+function handleModalTouchEnd() {
+  isModalDragging.value = false;
+}
+
+// Обработчик для iOS жеста "назад" (свайп слева направо)
+function handleModalSwipeLeft(event: TouchEvent) {
+  const touchStartX = event.touches[0].clientX;
+  const touchStartTime = Date.now();
+  
+  const handleSwipeMove = (e: TouchEvent) => {
+    const currentX = e.touches[0].clientX;
+    const deltaX = currentX - touchStartX;
+    const deltaTime = Date.now() - touchStartTime;
+    
+    // Если свайп вправо больше 50px и быстрее 300ms
+    if (deltaX > 50 && deltaTime < 300) {
+      closeModals();
+      document.removeEventListener('touchmove', handleSwipeMove);
+      document.removeEventListener('touchend', handleSwipeEnd);
+    }
+  };
+  
+  const handleSwipeEnd = () => {
+    document.removeEventListener('touchmove', handleSwipeMove);
+    document.removeEventListener('touchend', handleSwipeEnd);
+  };
+  
+  document.addEventListener('touchmove', handleSwipeMove);
+  document.addEventListener('touchend', handleSwipeEnd);
 }
 
 // Просмотр события дня рождения
@@ -466,6 +543,28 @@ onMounted(() => {
   checkContactPickerSupport();
   // Очищаем метки "новый" при открытии раздела
   clearNewContactFlags();
+  
+  // Обработчик системного жеста "назад"
+  const handlePopState = () => {
+    if (isAddModalOpen.value || isEditModalOpen.value) {
+      // Закрываем модальное окно без вызова history.back()
+      isAddModalOpen.value = false;
+      isEditModalOpen.value = false;
+      editingContact.value = null;
+    }
+  };
+  
+  window.addEventListener('popstate', handlePopState);
+  
+  // Обработчик Android жеста "назад"
+  if (window.Capacitor) {
+    App.addListener('backButton', () => {
+      if (isAddModalOpen.value || isEditModalOpen.value) {
+        closeModals();
+        return false; // Предотвращаем закрытие приложения
+      }
+    });
+  }
 });
 
 // Очищаем метки "новый" при активации вкладки (возвращении на неё)
@@ -663,9 +762,18 @@ watch(() => route.path, (newPath, oldPath) => {
       <ion-modal
         :is-open="isAddModalOpen || isEditModalOpen"
         @did-dismiss="closeModals"
+        :can-dismiss="true"
+        :show-backdrop="true"
+        :backdrop-dismiss="true"
       >
         <ion-header>
-          <ion-toolbar>
+          <ion-toolbar
+            @touchstart="handleModalTouchStart"
+            @touchmove="handleModalTouchMove"
+            @touchend="handleModalTouchEnd"
+            @touchstart.left="handleModalSwipeLeft"
+            :class="{ 'modal-dragging': isModalDragging }"
+          >
             <ion-title>{{
               editingContact ? "Редактировать контакт" : "Новый контакт"
             }}</ion-title>
@@ -676,7 +784,12 @@ watch(() => route.path, (newPath, oldPath) => {
             </ion-buttons>
           </ion-toolbar>
         </ion-header>
-        <ion-content class="ion-padding">
+        <ion-content 
+          class="ion-padding"
+          @touchstart="handleModalTouchStart"
+          @touchmove="handleModalTouchMove"
+          @touchend="handleModalTouchEnd"
+        >
           <ContactForm
             :contact="editingContact"
             :is-open="isAddModalOpen || isEditModalOpen"
@@ -996,5 +1109,11 @@ watch(() => route.path, (newPath, oldPath) => {
 
 .fab-disabled ion-icon {
   opacity: 0.5 !important;
+}
+
+/* Стили для жестов модального окна */
+.modal-dragging {
+  transform: translateY(10px);
+  transition: transform 0.2s ease;
 }
 </style>

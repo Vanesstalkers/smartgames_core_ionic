@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import {
   IonPage,
   IonHeader,
@@ -178,11 +178,26 @@ const yearPickerButtons = [
 function selectCell(cell: any) {
   selectedDate.value = cell.iso;
   isModalOpen.value = true;
+  
+  // Добавляем запись в историю браузера для поддержки жеста "назад"
+  if (window.history && window.history.pushState) {
+    window.history.pushState({ modal: 'events' }, '', window.location.href);
+  }
 }
 
 function closeModal() {
+  const wasModalOpen = isModalOpen.value;
+  
   isModalOpen.value = false;
   selectedDate.value = null;
+  
+  // Удаляем запись из истории браузера
+  if (wasModalOpen && window.history && window.history.state) {
+    const currentState = window.history.state;
+    if (currentState && currentState.modal === 'events') {
+      window.history.back();
+    }
+  }
 }
 
 function editEvent(id: string) {
@@ -190,6 +205,11 @@ function editEvent(id: string) {
   if (event) {
     editingEvent.value = event;
     isEditModalOpen.value = true;
+    
+    // Добавляем запись в историю браузера для поддержки жеста "назад"
+    if (window.history && window.history.pushState) {
+      window.history.pushState({ modal: 'editEvent' }, '', window.location.href);
+    }
   }
 }
 
@@ -200,8 +220,18 @@ function deleteEvent(id: string) {
 }
 
 function closeEditModal() {
+  const wasModalOpen = isEditModalOpen.value;
+  
   isEditModalOpen.value = false;
   editingEvent.value = null;
+  
+  // Удаляем запись из истории браузера
+  if (wasModalOpen && window.history && window.history.state) {
+    const currentState = window.history.state;
+    if (currentState && currentState.modal === 'editEvent') {
+      window.history.back();
+    }
+  }
 }
 
 function saveEvent(eventData: Omit<MemorialEvent, "id">) {
@@ -223,11 +253,26 @@ function saveEvent(eventData: Omit<MemorialEvent, "id">) {
 function openAddEventModal() {
   newEventDate.value = selectedDate.value;
   isAddEventModalOpen.value = true;
+  
+  // Добавляем запись в историю браузера для поддержки жеста "назад"
+  if (window.history && window.history.pushState) {
+    window.history.pushState({ modal: 'addEvent' }, '', window.location.href);
+  }
 }
 
 function closeAddEventModal() {
+  const wasModalOpen = isAddEventModalOpen.value;
+  
   isAddEventModalOpen.value = false;
   newEventDate.value = null;
+  
+  // Удаляем запись из истории браузера
+  if (wasModalOpen && window.history && window.history.state) {
+    const currentState = window.history.state;
+    if (currentState && currentState.modal === 'addEvent') {
+      window.history.back();
+    }
+  }
 }
 
 function saveNewEvent(eventData: Omit<MemorialEvent, "id">) {
@@ -267,6 +312,26 @@ const openYearPicker = async () => {
     console.error("Ошибка при создании year picker:", error);
   }
 };
+
+// Обработчик системного жеста "назад" для модальных окон
+onMounted(() => {
+  const handlePopState = () => {
+    if (isModalOpen.value) {
+      isModalOpen.value = false;
+      selectedDate.value = null;
+    }
+    if (isEditModalOpen.value) {
+      isEditModalOpen.value = false;
+      editingEvent.value = null;
+    }
+    if (isAddEventModalOpen.value) {
+      isAddEventModalOpen.value = false;
+      newEventDate.value = null;
+    }
+  };
+  
+  window.addEventListener('popstate', handlePopState);
+});
 </script>
 
 <template>

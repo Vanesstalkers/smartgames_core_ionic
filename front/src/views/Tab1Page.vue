@@ -307,11 +307,26 @@ const getActiveFiltersCount = computed(() => {
 const openAddEventModal = () => {
   editingEvent.value = null;
   isAddEventModalOpen.value = true;
+  
+  // Добавляем запись в историю браузера для поддержки жеста "назад"
+  if (window.history && window.history.pushState) {
+    window.history.pushState({ modal: 'addEvent' }, '', window.location.href);
+  }
 };
 
 const closeAddEventModal = () => {
+  const wasModalOpen = isAddEventModalOpen.value;
+  
   isAddEventModalOpen.value = false;
   editingEvent.value = null;
+  
+  // Удаляем запись из истории браузера
+  if (wasModalOpen && window.history && window.history.state) {
+    const currentState = window.history.state;
+    if (currentState && currentState.modal === 'addEvent') {
+      window.history.back();
+    }
+  }
 };
 
 const saveEvent = (eventData: Omit<MemorialEvent, 'id'>) => {
@@ -409,6 +424,17 @@ onMounted(() => {
       eventsStore.createBirthdayEvent(contact);
     }
   });
+  
+  // Обработчик системного жеста "назад" для модальных окон
+  const handlePopState = () => {
+    if (isAddEventModalOpen.value) {
+      // Закрываем модальное окно без вызова history.back()
+      isAddEventModalOpen.value = false;
+      editingEvent.value = null;
+    }
+  };
+  
+  window.addEventListener('popstate', handlePopState);
 });
 </script>
 

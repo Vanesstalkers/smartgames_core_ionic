@@ -85,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import {
   IonCard,
   IonCardHeader,
@@ -129,10 +129,25 @@ const openTopUpModal = () => {
   isTopUpModalOpen.value = true;
   topUpAmount.value = 0;
   paymentMethod.value = '';
+  
+  // Добавляем запись в историю браузера для поддержки жеста "назад"
+  if (window.history && window.history.pushState) {
+    window.history.pushState({ modal: 'topUp' }, '', window.location.href);
+  }
 };
 
 const closeTopUpModal = () => {
+  const wasModalOpen = isTopUpModalOpen.value;
+  
   isTopUpModalOpen.value = false;
+  
+  // Удаляем запись из истории браузера
+  if (wasModalOpen && window.history && window.history.state) {
+    const currentState = window.history.state;
+    if (currentState && currentState.modal === 'topUp') {
+      window.history.back();
+    }
+  }
 };
 
 const processTopUp = () => {
@@ -146,6 +161,18 @@ const processTopUp = () => {
     closeTopUpModal();
   }
 };
+
+// Обработчик системного жеста "назад" для модального окна
+onMounted(() => {
+  const handlePopState = () => {
+    if (isTopUpModalOpen.value) {
+      // Закрываем модальное окно без вызова history.back()
+      isTopUpModalOpen.value = false;
+    }
+  };
+  
+  window.addEventListener('popstate', handlePopState);
+});
 </script>
 
 <style scoped>

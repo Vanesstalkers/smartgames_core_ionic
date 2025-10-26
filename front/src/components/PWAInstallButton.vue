@@ -11,12 +11,12 @@
     </ion-button>
 
     <!-- Инструкции по установке -->
-    <ion-modal :is-open="isInstructionsOpen" @did-dismiss="isInstructionsOpen = false">
+    <ion-modal :is-open="isInstructionsOpen" @did-dismiss="closeInstructions">
       <ion-header>
         <ion-toolbar>
           <ion-title>Установка приложения</ion-title>
           <ion-buttons slot="end">
-            <ion-button @click="isInstructionsOpen = false">
+            <ion-button @click="closeInstructions">
               <ion-icon :icon="closeOutline"></ion-icon>
             </ion-button>
           </ion-buttons>
@@ -87,7 +87,7 @@
 
         <ion-button 
           expand="block" 
-          @click="isInstructionsOpen = false"
+          @click="closeInstructions"
           class="ion-margin-top"
         >
           Понятно
@@ -144,6 +144,25 @@ export default defineComponent({
 
     const showInstallInstructions = () => {
       isInstructionsOpen.value = true;
+      
+      // Добавляем запись в историю браузера для поддержки жеста "назад"
+      if (window.history && window.history.pushState) {
+        window.history.pushState({ modal: 'pwaInstructions' }, '', window.location.href);
+      }
+    };
+
+    const closeInstructions = () => {
+      const wasModalOpen = isInstructionsOpen.value;
+      
+      isInstructionsOpen.value = false;
+      
+      // Удаляем запись из истории браузера
+      if (wasModalOpen && window.history && window.history.state) {
+        const currentState = window.history.state;
+        if (currentState && currentState.modal === 'pwaInstructions') {
+          window.history.back();
+        }
+      }
     };
 
     const checkInstallability = () => {
@@ -159,6 +178,16 @@ export default defineComponent({
     onMounted(() => {
       // Проверяем через небольшую задержку
       setTimeout(checkInstallability, 1000);
+      
+      // Обработчик системного жеста "назад" для модального окна
+      const handlePopState = () => {
+        if (isInstructionsOpen.value) {
+          // Закрываем модальное окно без вызова history.back()
+          isInstructionsOpen.value = false;
+        }
+      };
+      
+      window.addEventListener('popstate', handlePopState);
     });
 
     return {
@@ -169,6 +198,7 @@ export default defineComponent({
       isSafari,
       isFirefox,
       showInstallInstructions,
+      closeInstructions,
       downloadOutline,
       closeOutline,
       checkmarkCircleOutline
